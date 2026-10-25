@@ -1,5 +1,6 @@
 package com.blackstack.beatbox
 
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
@@ -12,6 +13,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,6 +44,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -53,9 +56,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -70,6 +72,18 @@ import com.blackstack.beatbox.ui.theme.BeatBoxMotion
 import com.blackstack.beatbox.ui.theme.LocalReducedMotion
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlin.math.abs
+import kotlin.math.roundToInt
+
+/** Aktif satırın merkezinin viewport içindeki dikey çapa noktası. */
+internal const val LyricsAnchorFraction = 0.40f
+
+/** Satırlar arası kaydırmanın süresi; iki aşamalı animasyonun yerini alır. */
+private const val LyricsScrollDuration = 320
+
+/** Tüm satırlarda aynı metrikler kullanılır; aktif satır büyüyüp küçülmez. */
+private val LyricsFontSize = 24.sp
+private val LyricsLineHeight = 36.sp
 
 /**
  * Karaoke ilerlemesini karakter indeksine çevirir.
@@ -82,6 +96,34 @@ internal fun karaokeSungChars(textLength: Int, progress: Float): Int {
 }
 
 /**
+ * Görünür bir satırı çapa noktasına getirmek için gereken kaydırma miktarı.
+ * Pozitif değer içeriği yukarı, negatif değer aşağı kaydırır.
+ */
+internal fun lyricsScrollDelta(
+    itemOffset: Int,
+    itemSize: Int,
+    viewportStart: Int,
+    viewportHeight: Int,
+    anchorFraction: Float = LyricsAnchorFraction
+): Float {
+    val desiredCenter = viewportStart + viewportHeight * anchorFraction
+    val itemCenter = itemOffset + itemSize / 2f
+    return itemCenter - desiredCenter
+}
+
+/**
+ * Görünür olmayan bir satıra atlarken kullanılacak offset.
+ *
+ * `scrollToItem` offset'i satırın üst kenarını viewport başlangıcına göre
+ * kaydırır; negatif değer satırı aşağıda konumlandırır.
+ */
+internal fun lyricsItemScrollOffset(
+    estimatedItemSize: Int,
+    viewportHeight: Int,
+    anchorFraction: Float = LyricsAnchorFraction
+): Int = (estimatedItemSize / 2f - viewportHeight * anchorFraction).roundToInt()
+
+/**
  * Senkron söz listesi.
  *
  * Aktif satır ekranın yaklaşık üçte birinde tutulur. Kullanıcı listeye
@@ -92,13 +134,14 @@ internal fun karaokeSungChars(textLength: Int, progress: Float): Int {
 internal fun LyricsLines(
     lyrics: SyncedLyrics,
     currentLineIndex: Int,
-    currentPositionMs: Long,
+    positionState: State<Long>,
     primaryColor: Color,
     strings: Strings,
     onSeek: (Long) -> Unit
 ) {
     val listState = rememberLazyListState()
     val reducedMotion = LocalReducedMotion.current
+    val density = LocalDensity.current
     var userScrolling by remember { mutableStateOf(false) }
     var interactionTick by remember { mutableIntStateOf(0) }
 
@@ -110,30 +153,53 @@ internal fun LyricsLines(
         }
     }
 
-    // Aktif satırı ekranın üst-orta bölgesine getir. viewport ölçülmeden
-    // animateScrollToItem çağrılmaz; aksi halde satır üst çubuğun altında kalır.
-    LaunchedEffect(currentLineIndex, userScrolling, lyrics.lines.size) {
-        if (!userScrolling && currentLineIndex in lyrics.lines.indices) {
-            snapshotFlow {
-                listState.layoutInfo.viewportEndOffset - listState.layoutInfo.viewportStartOffset
-            }.first { it > 0 }
+    // Aktif satırı tek bir yumuşak hareketle çapa noktasına getir.
+    //
+    // Önceden önce animateScrollToItem (satır tepeye) sonra animateScrollBy
+    // (geri aşağı) çalışıyordu; bu iki aşama "yukarı-aşağı" titremesi
+    // oluşturuyordu. Satır zaten görünürken yalnızca hedefe olan fark kadar
+    // kaydırmak tek ve kesintisiz bir animasyon verir.
+    LaunchedEffect(currentLineIndex, userScrolling, lyrics.lines.size, reducedMotion) {
+        if (userScrolling || currentLineIndex !in lyrics.lines.indices) return@LaunchedEffect
 
-            // Önce satırı görünür alana getir, sonra gerçek ölçüsüne göre
-            // ekranın üst-orta bölgesine kaydır. Sabit offset kullanmak,
-            // farklı satır yüksekliklerinde (ör. iki satıra taşan sözler)
-            // yanlış konumlamaya yol açıyordu.
-            listState.animateScrollToItem(currentLineIndex)
-            val itemInfo = listState.layoutInfo.visibleItemsInfo
-                .firstOrNull { it.index == currentLineIndex }
-            if (itemInfo != null) {
-                val viewportStart = listState.layoutInfo.viewportStartOffset
-                val viewportEnd = listState.layoutInfo.viewportEndOffset
-                val desiredCenter = viewportStart + (viewportEnd - viewportStart) * 0.40f
-                val itemCenter = itemInfo.offset + itemInfo.size / 2
-                val target = itemCenter - desiredCenter
-                if (target != 0f) {
-                    listState.animateScrollBy(target)
+        val viewportHeight = snapshotFlow {
+            listState.layoutInfo.viewportEndOffset - listState.layoutInfo.viewportStartOffset
+        }.first { it > 0 }
+
+        val layoutInfo = listState.layoutInfo
+        val itemInfo = layoutInfo.visibleItemsInfo.firstOrNull { it.index == currentLineIndex }
+
+        if (itemInfo != null) {
+            val delta = lyricsScrollDelta(
+                itemOffset = itemInfo.offset,
+                itemSize = itemInfo.size,
+                viewportStart = layoutInfo.viewportStartOffset,
+                viewportHeight = viewportHeight
+            )
+            if (abs(delta) >= 1f) {
+                if (reducedMotion) {
+                    listState.scrollBy(delta)
+                } else {
+                    listState.animateScrollBy(
+                        value = delta,
+                        animationSpec = tween(
+                            durationMillis = LyricsScrollDuration,
+                            easing = FastOutSlowInEasing
+                        )
+                    )
                 }
+            }
+        } else {
+            // Uzak bir ana atlandıysa satırı tek animasyonla konumlandır.
+            // En yakın görünür satırın yüksekliği iyi bir tahmin verir.
+            val estimatedSize = layoutInfo.visibleItemsInfo
+                .minByOrNull { abs(it.index - currentLineIndex) }?.size
+                ?: with(density) { 58.dp.toPx().toInt() }
+            val scrollOffset = lyricsItemScrollOffset(estimatedSize, viewportHeight)
+            if (reducedMotion) {
+                listState.scrollToItem(currentLineIndex, scrollOffset)
+            } else {
+                listState.animateScrollToItem(currentLineIndex, scrollOffset)
             }
         }
     }
@@ -177,10 +243,9 @@ internal fun LyricsLines(
                 line = line,
                 isCurrent = isCurrent,
                 isPast = isPast,
-                currentPositionMs = currentPositionMs,
+                positionState = positionState,
                 lineDurationMs = lineDurationMs,
                 primaryColor = primaryColor,
-                reducedMotion = reducedMotion,
                 strings = strings,
                 onClick = {
                     userScrolling = false
@@ -196,10 +261,9 @@ private fun LyricsLine(
     line: SyncedLyricsLine,
     isCurrent: Boolean,
     isPast: Boolean,
-    currentPositionMs: Long,
+    positionState: State<Long>,
     lineDurationMs: Long,
     primaryColor: Color,
-    reducedMotion: Boolean,
     strings: Strings,
     onClick: () -> Unit
 ) {
@@ -212,11 +276,6 @@ private fun LyricsLine(
         targetValue = targetAlpha,
         animationSpec = tween(BeatBoxMotion.Standard),
         label = "lyrics_line_alpha"
-    )
-    val scale by animateFloatAsState(
-        targetValue = if (isCurrent && !reducedMotion) 1.015f else 1f,
-        animationSpec = BeatBoxMotion.Soft,
-        label = "lyrics_line_scale"
     )
     val accentAlpha by animateFloatAsState(
         targetValue = if (isCurrent) 1f else 0f,
@@ -237,12 +296,7 @@ private fun LyricsLine(
                 indication = null,
                 onClick = onClick
             )
-            .padding(vertical = 10.dp)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-                transformOrigin = TransformOrigin(0f, 0.5f)
-            },
+            .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Aktif satırın solundaki aurora çizgisi; satır değişince kaymaz.
@@ -272,7 +326,9 @@ private fun LyricsLine(
                 )
 
                 isCurrent -> {
-                    val progress = ((currentPositionMs - line.timestampMs).toFloat() /
+                    // Konum yalnızca aktif satırda okunur; diğer satırlar
+                    // 100 ms'lik konum güncellemelerinde yeniden çizilmez.
+                    val progress = ((positionState.value - line.timestampMs).toFloat() /
                         lineDurationMs.toFloat()).coerceIn(0f, 1f)
                     KaraokeText(
                         text = line.text,
@@ -284,8 +340,8 @@ private fun LyricsLine(
                 else -> Text(
                     text = line.text,
                     color = Color.White.copy(alpha = alpha),
-                    fontSize = 22.sp,
-                    lineHeight = 33.sp,
+                    fontSize = LyricsFontSize,
+                    lineHeight = LyricsLineHeight,
                     fontWeight = FontWeight.SemiBold,
                     textAlign = TextAlign.Start,
                     modifier = Modifier.fillMaxWidth()
@@ -310,13 +366,14 @@ private fun LyricsIntroLine(
             imageVector = Icons.Rounded.GraphicEq,
             contentDescription = null,
             tint = if (isCurrent) primaryColor else Color.White.copy(alpha = alpha * 0.7f),
-            modifier = Modifier.size(if (isCurrent) 28.dp else 22.dp)
+            modifier = Modifier.size(24.dp)
         )
         Text(
             text = if (isCurrent) strings.get("lyrics_intro") else "♪ ♪ ♪",
             color = if (isCurrent) Color.White.copy(alpha = 0.92f) else Color.White.copy(alpha = alpha),
-            fontSize = if (isCurrent) 22.sp else 19.sp,
-            fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium
+            fontSize = 20.sp,
+            lineHeight = 28.sp,
+            fontWeight = FontWeight.SemiBold
         )
     }
 }
@@ -338,29 +395,20 @@ private fun KaraokeText(
         buildAnnotatedString {
             if (sungChars > 0) {
                 withStyle(
-                    SpanStyle(
-                        color = Color.White.copy(alpha = 0.94f),
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    SpanStyle(color = Color.White.copy(alpha = 0.94f))
                 ) {
                     append(text.substring(0, sungChars))
                 }
             }
             if (sungChars < text.length) {
                 withStyle(
-                    SpanStyle(
-                        color = primaryColor,
-                        fontWeight = FontWeight.ExtraBold
-                    )
+                    SpanStyle(color = primaryColor)
                 ) {
                     append(text[sungChars])
                 }
                 if (sungChars + 1 < text.length) {
                     withStyle(
-                        SpanStyle(
-                            color = Color.White.copy(alpha = 0.30f),
-                            fontWeight = FontWeight.Medium
-                        )
+                        SpanStyle(color = Color.White.copy(alpha = 0.30f))
                     ) {
                         append(text.substring(sungChars + 1))
                     }
@@ -371,8 +419,8 @@ private fun KaraokeText(
 
     Text(
         text = annotated,
-        fontSize = 26.sp,
-        lineHeight = 38.sp,
+        fontSize = LyricsFontSize,
+        lineHeight = LyricsLineHeight,
         fontWeight = FontWeight.SemiBold,
         modifier = Modifier.fillMaxWidth()
     )

@@ -53,6 +53,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -105,6 +106,9 @@ fun LyricsScreen(
 ) {
     val lyricsState by viewModel.lyricsState.collectAsState()
     val currentLineIndex by viewModel.currentLineIndex.collectAsState()
+    // Konum yalnızca aktif satırda okunur; 100 ms'lik güncellemeler tüm
+    // listeyi yeniden çizmez.
+    val positionState = rememberUpdatedState(currentPositionMs)
 
     var showManualSearchDialog by remember { mutableStateOf(false) }
     var searchTrackQuery by remember(audio.id) { mutableStateOf(audio.title) }
@@ -128,9 +132,12 @@ fun LyricsScreen(
     LaunchedEffect(audio.id) { viewModel.loadLyrics(audio) }
     LaunchedEffect(currentPositionMs) { viewModel.updatePlaybackPosition(currentPositionMs) }
 
-    val seekTo: (Long) -> Unit = { ms ->
-        onSeekTo?.invoke(ms)
-        viewModel.updatePlaybackPosition(ms)
+    val latestOnSeekTo = rememberUpdatedState(onSeekTo)
+    val seekTo: (Long) -> Unit = remember(viewModel) {
+        { ms: Long ->
+            latestOnSeekTo.value?.invoke(ms)
+            viewModel.updatePlaybackPosition(ms)
+        }
     }
 
     val artistLabel = audio.artist
@@ -264,7 +271,7 @@ fun LyricsScreen(
                         LyricsLines(
                             lyrics = state.lyrics,
                             currentLineIndex = currentLineIndex,
-                            currentPositionMs = currentPositionMs,
+                            positionState = positionState,
                             primaryColor = primaryColor,
                             strings = strings,
                             onSeek = seekTo
