@@ -110,7 +110,7 @@ fun FolderDialog(
                         fontSize = 20.sp
                     )
                     Text(
-                        "${selectedFolders.size} klasÃ¶r seÃ§ili",
+                        "${selectedFolders.size} klasör seçili",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.primary.copy(0.7f),
                         fontWeight = FontWeight.Medium
@@ -121,7 +121,7 @@ fun FolderDialog(
         text = {
             Column {
                 Text(
-                    "MÃ¼zik klasÃ¶rlerini seÃ§",
+                    "Müzik klasörlerini seç",
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurface.copy(0.6f),
                     modifier = Modifier.padding(bottom = 12.dp)

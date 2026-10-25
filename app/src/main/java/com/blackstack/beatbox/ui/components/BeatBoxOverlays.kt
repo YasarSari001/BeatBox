@@ -289,7 +289,7 @@ fun BeatBoxOverlays(
                     onUserProfileChange(newUser)
                     saveUserProfile(prefs, newUser)
                     overlays.showAuth = false
-                    Toast.makeText(ctx, "HoÅŸ geldiniz, ${newUser.displayName}!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "Hoş geldiniz, ${newUser.displayName}!", Toast.LENGTH_SHORT).show()
                 }
             )
         }
@@ -303,13 +303,13 @@ fun BeatBoxOverlays(
                 onSaveProfile = { updatedUser ->
                     onUserProfileChange(updatedUser)
                     saveUserProfile(prefs, updatedUser)
-                    Toast.makeText(ctx, "Profil gÃ¼ncellendi", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "Profil güncellendi", Toast.LENGTH_SHORT).show()
                 },
                 onLogout = {
                     val loggedOut = UserProfile(isLoggedIn = false)
                     onUserProfileChange(loggedOut)
                     saveUserProfile(prefs, loggedOut)
-                    Toast.makeText(ctx, "Oturum kapatÄ±ldÄ±", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "Oturum kapatıldı", Toast.LENGTH_SHORT).show()
                 }
             )
         }

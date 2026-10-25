@@ -70,13 +70,13 @@ fun WrappedDialog(
                         putExtra(Intent.EXTRA_SUBJECT, "BeatBox Wrapped")
                         putExtra(Intent.EXTRA_TEXT, shareText)
                     }
-                    ctx.startActivity(Intent.createChooser(intent, "MÃ¼zik Ã–zetini PaylaÅŸ"))
+                    ctx.startActivity(Intent.createChooser(intent, "Müzik Özetini Paylaş"))
                 },
                 modifier = Modifier.buttonShadow()
             ) {
                 Icon(Icons.Rounded.Share, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Ã–zeti PaylaÅŸ", fontWeight = FontWeight.Bold)
+                Text("Özeti Paylaş", fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
@@ -161,7 +161,7 @@ fun HistoryDialog(
                     prefs.edit { remove("stats_history") }
                     onDismiss()
                 }) {
-                    Text("GeÃ§miÅŸi Temizle", color = Color.Red)
+                    Text("Geçmişi Temizle", color = Color.Red)
                 }
             }
         },
@@ -174,13 +174,13 @@ fun HistoryDialog(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.History, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
                 Spacer(Modifier.width(12.dp))
-                Text("Dinleme GeÃ§miÅŸi", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text("Dinleme Geçmişi", fontWeight = FontWeight.Bold, fontSize = 18.sp)
             }
         },
         text = {
             if (historySongs.isEmpty()) {
                 Box(Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) {
-                    Text("HenÃ¼z dinleme geÃ§miÅŸi yok", color = Color.Gray)
+                    Text("Henüz dinleme geçmişi yok", color = Color.Gray)
                 }
             } else {
                 LazyColumn(modifier = Modifier.heightIn(max = 350.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

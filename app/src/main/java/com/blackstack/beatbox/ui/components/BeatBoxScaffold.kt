@@ -410,7 +410,7 @@ fun BeatBoxScaffold(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .navigationBarsPadding() // System navigation bar iÃ§in padding
+                .navigationBarsPadding() // System navigation bar için padding
         ) {
             // Mini player yalnizca gercekten bir parca seciliyken gorunur.
             if (!showPlayer && currentAudio != null) {
