@@ -803,6 +803,11 @@ class Strings(val lang: AppLanguage) {
             "de" to "Weiter", "it" to "Avanti", "pt" to "Próximo", "ru" to "Далее",
             "ja" to "次へ", "zh" to "下一步", "ar" to "التالي", "ko" to "다음"
         ),
+        "previous" to mapOf(
+            "en" to "Previous", "tr" to "Önceki", "es" to "Anterior", "fr" to "Précédent",
+            "de" to "Zurück", "it" to "Precedente", "pt" to "Anterior", "ru" to "Назад",
+            "ja" to "前へ", "zh" to "上一步", "ar" to "السابق", "ko" to "이전"
+        ),
         "default" to mapOf(
             "en" to "Default", "tr" to "Varsayılan", "es" to "Predeterminado", "fr" to "Par défaut",
             "de" to "Standard", "it" to "Predefinito", "pt" to "Padrão", "ru" to "По умолчанию",
@@ -829,6 +834,12 @@ class Strings(val lang: AppLanguage) {
             "fr" to "Chargement des paroles...", "de" to "Texte werden geladen...", "it" to "Caricamento testi...",
             "pt" to "Carregando letras...", "ru" to "Загрузка текста...", "ja" to "歌詞を読み込んでいます...",
             "zh" to "加载歌词中...", "ar" to "تحميل الكلمات...", "ko" to "가사 로딩 중..."
+        ),
+        "lyrics_intro" to mapOf(
+            "en" to "Instrumental intro", "tr" to "Müzik girişi", "es" to "Introducción instrumental",
+            "fr" to "Introduction instrumentale", "de" to "Instrumentales Intro", "it" to "Introduzione strumentale",
+            "pt" to "Introdução instrumental", "ru" to "Инструментальное вступление", "ja" to "インスト前奏",
+            "zh" to "器乐前奏", "ar" to "مقدمة موسيقية", "ko" to "연주 인트로"
         ),
         "lyrics_error" to mapOf(
             "en" to "Lyrics error", "tr" to "Şarkı sözü hatası", "es" to "Error de letras",

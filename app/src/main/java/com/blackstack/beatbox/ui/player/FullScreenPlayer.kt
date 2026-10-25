@@ -719,7 +719,11 @@ fun FullScreenPlayer(
                 viewModel = lyricsViewModel,
                 strings = strings,
                 onSeekTo = { ms -> player.seekTo(ms.toInt()) },
-                onDismiss = { showLyrics = false }
+                onDismiss = { showLyrics = false },
+                durationMs = a.duration,
+                onPlayPause = onPlayPause,
+                onNext = onNext,
+                onPrev = onPrev
             )
         }
 
