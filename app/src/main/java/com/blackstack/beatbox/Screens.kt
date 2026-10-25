@@ -70,9 +70,7 @@ fun BeatBoxApp(
                 ContextCompat.checkSelfPermission(ctx, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
         )
     }
-    // Tempo visualization toggle state (tempo-based visualizations).
-    // Declared before the launchers because the microphone launcher callback
-    // has to be able to turn it back on.
+    // Tempo görselleştirme anahtarı; mikrofon geri çağrısı da bunu açar.
     var tempoViz by remember {
         mutableStateOf(
             prefs.getBoolean("tempo_visualization", true) &&
@@ -104,11 +102,7 @@ fun BeatBoxApp(
             showOnboarding = false
             prefs.edit { putBoolean("first_launch", false) }
             if (!hasPermission) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    permLauncher.launch(arrayOf(Manifest.permission.READ_MEDIA_AUDIO, Manifest.permission.POST_NOTIFICATIONS))
-                } else {
-                    permLauncher.launch(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE))
-                }
+                permLauncher.launch(requiredAudioPermissions())
             }
         }
         return
@@ -217,11 +211,7 @@ fun BeatBoxApp(
     }
     player.uiActionPlayNext = playNext; player.uiActionPlayPrev = playPrev; player.uiActionPlayPause = togglePlayPause
 
-    BackHandler(overlays.showPlayer || overlays.playlistDetail != null || overlays.showSettings) {
-        if (overlays.showPlayer) overlays.showPlayer = false
-        else if (overlays.playlistDetail != null) overlays.playlistDetail = null
-        else if (overlays.showSettings) overlays.showSettings = false
-    }
+    BackHandler(overlays.hasFullScreenOverlay) { overlays.closeTopmost() }
 
     var compactTopBarVisible by remember { mutableStateOf(false) }
 
@@ -277,10 +267,7 @@ fun BeatBoxApp(
                     Box(Modifier.fillMaxSize().padding(padding)) {
                         if (!hasPermission) {
                             PermissionScreen(strings) {
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
-                                    permLauncher.launch(arrayOf(Manifest.permission.READ_MEDIA_AUDIO, Manifest.permission.POST_NOTIFICATIONS))
-                                else
-                                    permLauncher.launch(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE))
+                                permLauncher.launch(requiredAudioPermissions())
                             }
                         } else if (isLoading) {
                             BeatBoxSkeleton(Modifier.fillMaxSize())
@@ -402,4 +389,11 @@ fun BeatBoxApp(
     }
 }
 }
+
+/** Ses kütüphanesi izinleri; Android 13+ bildirim iznini de kapsar. */
+private fun requiredAudioPermissions(): Array<String> =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+        arrayOf(Manifest.permission.READ_MEDIA_AUDIO, Manifest.permission.POST_NOTIFICATIONS)
+    else
+        arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
 

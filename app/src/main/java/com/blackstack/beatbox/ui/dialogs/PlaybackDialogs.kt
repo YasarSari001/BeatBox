@@ -23,7 +23,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Equalizer
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.MusicNote
@@ -51,6 +50,8 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.blackstack.beatbox.ui.components.EmptyArtKind
+import com.blackstack.beatbox.ui.components.EmptyStateArt
 
 /** Ekolayzer ön ayar seçimi. */
 @Composable
@@ -76,20 +77,11 @@ fun EQDialog(
         },
         title = { 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier
-                        .size(40.dp)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Rounded.Equalizer, 
-                        null, 
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-                Spacer(Modifier.width(12.dp))
+                EmptyStateArt(
+                    kind = EmptyArtKind.EQUALIZER,
+                    size = 48.dp
+                )
+                Spacer(Modifier.width(6.dp))
                 Column {
                     Text(strings.get("equalizer"), fontWeight = FontWeight.Bold, fontSize = 18.sp)
                     Text(
@@ -261,8 +253,11 @@ fun SleepTimerDialog(
         },
         title = { 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.Nightlight, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
-                Spacer(Modifier.width(12.dp))
+                EmptyStateArt(
+                    kind = EmptyArtKind.SLEEP,
+                    size = 48.dp
+                )
+                Spacer(Modifier.width(6.dp))
                 Text(strings.get("sleep_timer"), fontWeight = FontWeight.Bold)
             }
         },

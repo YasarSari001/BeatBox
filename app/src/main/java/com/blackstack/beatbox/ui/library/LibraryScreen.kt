@@ -9,9 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.MusicOff
-import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -31,6 +28,7 @@ import com.blackstack.beatbox.SortOption
 import com.blackstack.beatbox.Strings
 import com.blackstack.beatbox.groupSongsByArtist
 import com.blackstack.beatbox.ui.components.BeatBoxSongRow
+import com.blackstack.beatbox.ui.components.EmptyArtKind
 import kotlinx.coroutines.launch
 
 /**
@@ -259,7 +257,7 @@ fun LibraryScreen(
                         item(key = "empty") {
                             LibraryEmpty(
                                 title = emptyTitle(allAudioList, filter, strings),
-                                icon = emptyIcon(allAudioList, filter)
+                                kind = emptyArtKind(allAudioList, filter, search)
                             )
                         }
                     } else {
@@ -302,7 +300,7 @@ fun LibraryScreen(
                         item(key = "empty") {
                             LibraryEmpty(
                                 title = emptyTitle(allAudioList, filter, strings),
-                                icon = emptyIcon(allAudioList, filter)
+                                kind = emptyArtKind(allAudioList, filter, search)
                             )
                         }
                     } else {
@@ -339,7 +337,7 @@ fun LibraryScreen(
                         item(key = "empty") {
                             LibraryEmpty(
                                 title = emptyTitle(allAudioList, filter, strings),
-                                icon = emptyIcon(allAudioList, filter)
+                                kind = emptyArtKind(allAudioList, filter, search)
                             )
                         }
                     } else {
@@ -360,7 +358,7 @@ fun LibraryScreen(
                         item(key = "empty") {
                             LibraryEmpty(
                                 title = emptyTitle(allAudioList, filter, strings),
-                                icon = emptyIcon(allAudioList, filter)
+                                kind = emptyArtKind(allAudioList, filter, search)
                             )
                         }
                     } else {
@@ -382,7 +380,7 @@ fun LibraryScreen(
                         item(key = "empty") {
                             LibraryEmpty(
                                 title = emptyTitle(allAudioList, filter, strings),
-                                icon = emptyIcon(allAudioList, filter)
+                                kind = emptyArtKind(allAudioList, filter, search)
                             )
                         }
                     } else {
@@ -463,11 +461,14 @@ private fun emptyTitle(
     else -> strings.get("no_results")
 }
 
-private fun emptyIcon(
+private fun emptyArtKind(
     allAudioList: List<AudioFile>,
-    filter: LibraryFilter
-) = if (allAudioList.isEmpty() || filter == LibraryFilter.FAVORITES) {
-    Icons.Rounded.MusicOff
-} else {
-    Icons.Rounded.SearchOff
+    filter: LibraryFilter,
+    searchQuery: String
+): EmptyArtKind = when {
+    allAudioList.isEmpty() -> EmptyArtKind.MUSIC
+    filter == LibraryFilter.FOLDERS -> EmptyArtKind.FOLDER
+    searchQuery.isNotBlank() -> EmptyArtKind.SEARCH
+    filter == LibraryFilter.FAVORITES -> EmptyArtKind.MUSIC
+    else -> EmptyArtKind.SEARCH
 }

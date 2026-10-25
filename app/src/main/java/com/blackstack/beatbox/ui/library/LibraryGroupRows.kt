@@ -34,7 +34,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -43,6 +42,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.blackstack.beatbox.AlbumArtImage
 import com.blackstack.beatbox.ArtistImage
+import com.blackstack.beatbox.ui.components.EmptyArtKind
+import com.blackstack.beatbox.ui.components.EmptyStateArt
 import com.blackstack.beatbox.AudioFile
 import com.blackstack.beatbox.Strings
 import com.blackstack.beatbox.ui.theme.BeatBoxMotion
@@ -218,37 +219,16 @@ private fun LibraryGroupCard(
 @Composable
 internal fun LibraryEmpty(
     title: String,
-    icon: ImageVector
+    kind: EmptyArtKind
 ) {
-    val primary = MaterialTheme.colorScheme.primary
-    val secondary = MaterialTheme.colorScheme.secondary
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 36.dp),
+            .padding(horizontal = 20.dp, vertical = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(
-            modifier = Modifier
-                .size(78.dp)
-                .clip(CircleShape)
-                .background(
-                    Brush.linearGradient(
-                        listOf(primary.copy(alpha = 0.16f), secondary.copy(alpha = 0.07f))
-                    )
-                )
-                .border(1.dp, Color.White.copy(alpha = 0.08f), CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = primary.copy(alpha = 0.85f),
-                modifier = Modifier.size(34.dp)
-            )
-        }
-        Spacer(Modifier.height(14.dp))
+        EmptyStateArt(kind = kind, size = 96.dp)
+        Spacer(Modifier.height(12.dp))
         Text(
             text = title,
             fontSize = 13.5.sp,

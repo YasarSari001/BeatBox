@@ -21,7 +21,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
-import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
@@ -49,6 +48,8 @@ import androidx.compose.ui.unit.sp
 import com.blackstack.beatbox.AudioFile
 import com.blackstack.beatbox.Playlist
 import com.blackstack.beatbox.Strings
+import com.blackstack.beatbox.ui.components.EmptyArtKind
+import com.blackstack.beatbox.ui.components.EmptyStateArt
 import com.blackstack.beatbox.ui.components.PlaylistArtistCover
 import com.blackstack.beatbox.ui.components.PlaylistMosaicCover
 import com.blackstack.beatbox.ui.theme.BeatBoxMotion
@@ -555,54 +556,10 @@ internal fun EmptyPlaylists(
             .padding(horizontal = 20.dp, vertical = 26.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(
-            modifier = Modifier.size(width = 158.dp, height = 118.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(86.dp)
-                    .offset(x = (-24).dp, y = 4.dp)
-                    .graphicsLayer { rotationZ = -13f }
-                    .clip(RoundedCornerShape(22.dp))
-                    .background(primary.copy(alpha = 0.10f))
-                    .border(1.dp, Color.White.copy(alpha = 0.07f), RoundedCornerShape(22.dp))
-            )
-            Box(
-                modifier = Modifier
-                    .size(86.dp)
-                    .offset(x = 24.dp, y = 2.dp)
-                    .graphicsLayer { rotationZ = 12f }
-                    .clip(RoundedCornerShape(22.dp))
-                    .background(secondary.copy(alpha = 0.10f))
-                    .border(1.dp, Color.White.copy(alpha = 0.07f), RoundedCornerShape(22.dp))
-            )
-            Box(
-                modifier = Modifier
-                    .size(88.dp)
-                    .graphicsLayer { rotationZ = -3f }
-                    .shadow(
-                        elevation = 16.dp,
-                        shape = RoundedCornerShape(22.dp),
-                        ambientColor = primary.copy(alpha = 0.42f)
-                    )
-                    .clip(RoundedCornerShape(22.dp))
-                    .background(
-                        Brush.linearGradient(
-                            listOf(primary.copy(alpha = 0.32f), secondary.copy(alpha = 0.16f))
-                        )
-                    )
-                    .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(22.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.QueueMusic,
-                    contentDescription = null,
-                    tint = primary.copy(alpha = 0.92f),
-                    modifier = Modifier.size(36.dp)
-                )
-            }
-        }
+        EmptyStateArt(
+            kind = EmptyArtKind.PLAYLIST,
+            size = 148.dp
+        )
         Spacer(Modifier.height(18.dp))
         Text(
             text = strings.get("empty_playlists"),

@@ -31,6 +31,10 @@ class BeatBoxOverlayState {
     var showAuth by mutableStateOf(false)
     var showProfile by mutableStateOf(false)
 
+    /** Tam ekran katmanlardan biri açık mı? Geri tuşu ve erişilebilirlik için. */
+    val hasFullScreenOverlay: Boolean
+        get() = showPlayer || playlistDetail != null || showSettings
+
     /** Açık bir katman varsa geri tuşu önce onu kapatır. */
     fun closeTopmost(): Boolean = when {
         showPlayer -> { showPlayer = false; true }

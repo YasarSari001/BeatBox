@@ -8,20 +8,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.blackstack.beatbox.AudioFile
 import com.blackstack.beatbox.Playlist
 import com.blackstack.beatbox.Strings
 import com.blackstack.beatbox.groupSongsByArtist
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 /**
  * Ana sayfa: selamlama, devam eden çalma sahnesi ve kişisel raflar.
@@ -55,25 +51,16 @@ fun HomeScreen(
     }
     val listState = rememberLazyListState()
 
-    // Compact top bar visibility - polling approach since LazyListState props aren't snapshot-observable
-    var compactBarVisible by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-    
-    DisposableEffect(Unit) {
-        val job = scope.launch {
-            while (true) {
-                val firstVisible = listState.firstVisibleItemIndex
-                val offset = listState.firstVisibleItemScrollOffset
-                // Trigger when hero (index 1) scrolls up past 120px, or past hero (index > 1)
-                val shouldShow = firstVisible > 1 || (firstVisible == 1 && offset < -120)
-                if (shouldShow != compactBarVisible) {
-                    compactBarVisible = shouldShow
-                    onCompactBarVisibleChange?.invoke(shouldShow)
-                }
-                delay(50) // 20fps polling
-            }
+    // Compact top bar görünürlüğü: LazyListState alanları snapshot ile
+    // gözlemlenebilir. Selamlama 120 px'den fazla yukarı kaydığında veya
+    // tamamen görünümden çıktığında çubuk görünür. Polling yok.
+    LaunchedEffect(listState, onCompactBarVisibleChange) {
+        snapshotFlow {
+            listState.firstVisibleItemIndex > 0 ||
+                listState.firstVisibleItemScrollOffset > 120
         }
-        onDispose { job.cancel() }
+            .distinctUntilChanged()
+            .collect { visible -> onCompactBarVisibleChange?.invoke(visible) }
     }
 
     // "Senin için": en çok dinlenenler; henüz veri yoksa en yeni parçalar.

@@ -1,4 +1,4 @@
-package com.blackstack.beatbox.ui.components
+﻿package com.blackstack.beatbox.ui.components
 
 import com.blackstack.beatbox.*
 import com.blackstack.beatbox.ui.theme.BeatBoxMotion
@@ -130,31 +130,20 @@ fun BeatBoxScaffold(
         containerColor = Color.Transparent,
         topBar = {
             Column(Modifier.statusBarsPadding()) {
-                // Compact Top Bar Overlay (appears when scrolled past hero on Home)
-                AnimatedVisibility(
-                    visible = showCompactTopBar,
-                    enter = fadeIn(animationSpec = BeatBoxMotion.expressive()) + slideInVertically(
-                        initialOffsetY = { height -> -height }, animationSpec = BeatBoxMotion.slideSpec()
-                    ),
-                    exit = fadeOut(animationSpec = BeatBoxMotion.Snappy) + slideOutVertically(
-                        targetOffsetY = { height -> -height }, animationSpec = BeatBoxMotion.slideSpec()
-                    )
-                ) {
-                    CompactTopBar(
-                        strings = strings,
-                        userProfile = userProfile,
-                        avatarIcons = avatarIcons,
-                        onProfileClick = onCompactProfileClick,
-                        onSettingsClick = onCompactSettingsClick
-                    )
-                }
-
-                // Floating Oval Bar with Icons (transparent on Home)
+                // Tek yuva: kaydırılmadığında oval çubuk, kaydırıldığında
+                // compact pill. Yükseklik sabit olduğu için içerik zıplamaz.
                 Box(
                     Modifier
                         .fillMaxWidth()
+                        .height(80.dp)
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = !showCompactTopBar,
+                        enter = fadeIn(animationSpec = BeatBoxMotion.expressive()),
+                        exit = fadeOut(animationSpec = BeatBoxMotion.Snappy),
+                        modifier = Modifier.align(Alignment.Center)
+                    ) {
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -265,6 +254,27 @@ fun BeatBoxScaffold(
                     }
                 }
             }
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = showCompactTopBar,
+                        enter = fadeIn(animationSpec = BeatBoxMotion.expressive()) + slideInVertically(
+                            initialOffsetY = { height -> -height },
+                            animationSpec = BeatBoxMotion.slideSpec()
+                        ),
+                        exit = fadeOut(animationSpec = BeatBoxMotion.Snappy) + slideOutVertically(
+                            targetOffsetY = { height -> -height },
+                            animationSpec = BeatBoxMotion.slideSpec()
+                        ),
+                        modifier = Modifier.align(Alignment.Center)
+                    ) {
+                        CompactTopBar(
+                            strings = strings,
+                            userProfile = userProfile,
+                            avatarIcons = avatarIcons,
+                            onProfileClick = onCompactProfileClick,
+                            onSettingsClick = onCompactSettingsClick
+                        )
+                    }
+                }
 
             // Sleep Timer Indicator - Below TopBar
             if (player.isSleepTimerRunning && (player.sleepTimerMinutes > 0 || player.sleepTimerSeconds > 0)) {
@@ -478,19 +488,29 @@ private fun CompactTopBar(
         modifier = Modifier
             .fillMaxWidth()
             .height(48.dp)
-            .statusBarsPadding()
+            .shadow(
+                elevation = 6.dp,
+                shape = RoundedCornerShape(24.dp),
+                ambientColor = primary.copy(alpha = 0.22f)
+            )
+            .clip(RoundedCornerShape(24.dp))
             .background(
                 Brush.linearGradient(
                     listOf(
-                        MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
-                        MaterialTheme.colorScheme.surface.copy(alpha = 0.88f)
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.82f)
                     )
                 )
             )
-            .shadow(
-                elevation = 4.dp,
-                shape = RoundedCornerShape(0.dp),
-                ambientColor = primary.copy(alpha = 0.12f)
+            .border(
+                width = 1.dp,
+                brush = Brush.linearGradient(
+                    listOf(
+                        primary.copy(alpha = 0.30f),
+                        Color.White.copy(alpha = 0.08f)
+                    )
+                ),
+                shape = RoundedCornerShape(24.dp)
             )
     ) {
         Row(

@@ -22,7 +22,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.Icon
@@ -46,6 +45,8 @@ import com.blackstack.beatbox.AudioFile
 import com.blackstack.beatbox.Playlist
 import com.blackstack.beatbox.Strings
 import com.blackstack.beatbox.ui.components.BeatBoxSongRow
+import com.blackstack.beatbox.ui.components.EmptyArtKind
+import com.blackstack.beatbox.ui.components.EmptyStateArt
 import com.blackstack.beatbox.ui.components.PlaylistArtistCover
 import com.blackstack.beatbox.ui.components.PlaylistMosaicCover
 import com.blackstack.beatbox.ui.components.PlaylistSmartCover
@@ -302,34 +303,16 @@ private fun PlaylistDetailHeader(
 
 @Composable
 private fun PlaylistDetailEmpty(strings: Strings) {
-    val primary = MaterialTheme.colorScheme.primary
-    val secondary = MaterialTheme.colorScheme.secondary
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 44.dp),
+            .padding(horizontal = 24.dp, vertical = 40.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(
-            modifier = Modifier
-                .size(76.dp)
-                .clip(CircleShape)
-                .background(
-                    Brush.linearGradient(
-                        listOf(primary.copy(alpha = 0.16f), secondary.copy(alpha = 0.07f))
-                    )
-                )
-                .border(1.dp, Color.White.copy(alpha = 0.08f), CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.MusicNote,
-                contentDescription = null,
-                tint = primary.copy(alpha = 0.85f),
-                modifier = Modifier.size(32.dp)
-            )
-        }
+        EmptyStateArt(
+            kind = EmptyArtKind.PLAYLIST,
+            size = 124.dp
+        )
         Spacer(Modifier.height(14.dp))
         Text(
             text = strings.get("playlist_empty"),
