@@ -34,10 +34,6 @@ import com.blackstack.beatbox.ui.components.BeatBoxTabContent
 import com.blackstack.beatbox.ui.components.SplashScreen
 import com.blackstack.beatbox.ui.components.nextSongInQueue
 import com.blackstack.beatbox.ui.components.previousSongInQueue
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -53,7 +49,6 @@ fun BeatBoxApp(
 ) {
     val ctx = LocalContext.current
     val prefs = remember { ctx.getSharedPreferences("BeatBoxSettings", Context.MODE_PRIVATE) }
-    val coroutineScope = rememberCoroutineScope()
     val overlays = remember { BeatBoxOverlayState() }
     var showSplash by remember { mutableStateOf(true) }
     var showOnboarding by remember { mutableStateOf(prefs.getBoolean("first_launch", true)) }
@@ -99,41 +94,19 @@ fun BeatBoxApp(
         return
     }
 
-    var allAudioList by remember { mutableStateOf<List<AudioFile>>(emptyList()) }
-    var availableFolders by remember { mutableStateOf<List<String>>(emptyList()) }
+    // Kütüphane açılışta önbellekten anında gelir; MediaStore yalnızca
+    // kullanıcı yenilediğinde veya filtre ayarları değiştiğinde taranır.
+    val library = rememberLibraryState(ctx)
+    val allAudioList = library.songs
+    val availableFolders = library.folders
+    val isLoading = library.isLoading
+    val isRefreshing = library.isRefreshing
+
     var selectedFolders by remember { mutableStateOf(player.loadSelectedFolders()) }
     var minDurationSeconds by remember { mutableIntStateOf(player.loadMinDurationSetting()) }
-    var isLoading by remember { mutableStateOf(true) }
-    var isRefreshing by remember { mutableStateOf(false) }
-
-    fun reloadLibrary() {
-        if (!hasPermission || isRefreshing) return
-        isLoading = true
-        isRefreshing = true
-        coroutineScope.launch {
-            try {
-                val (loaded, folders) = withContext(Dispatchers.IO) {
-                    loadAudioFilesAndFolders(ctx, minDurationSeconds, selectedFolders)
-                }
-                // Daha önce çözülen sanatçı ve kapakları hemen uygula; ardından
-                // eksik kalanları arka planda çevrim içi tamamla.
-                val enriched = SongMetadataRepository.applyCached(ctx, loaded)
-                allAudioList = enriched
-                availableFolders = folders
-                isLoading = false
-                SongMetadataRepository.enrichUnknownArtists(ctx, enriched) { id, artist, artworkPath ->
-                    allAudioList = SongMetadataRepository.applyResolved(allAudioList, id, artist, artworkPath)
-                }
-            } finally {
-                isRefreshing = false
-            }
-        }
-    }
 
     LaunchedEffect(hasPermission, selectedFolders, minDurationSeconds) {
-        if (hasPermission) {
-            reloadLibrary()
-        } else isLoading = false
+        library.initialize(hasPermission, selectedFolders, minDurationSeconds)
     }
 
     var playlists by remember { mutableStateOf(player.loadPlaylists()) }
@@ -294,7 +267,7 @@ fun BeatBoxApp(
                                     player.savePlaylists(list)
                                 },
                                 onHomeCompactBarVisibleChange = { compactTopBarVisible = it },
-                                onRefresh = { reloadLibrary() },
+                                onRefresh = { library.refresh() },
                                 isRefreshing = isRefreshing
                             )
                         }
@@ -365,10 +338,19 @@ fun BeatBoxApp(
                 selectedFolders = folders
                 player.saveSelectedFolders(folders)
             },
-            onReloadLibrary = { reloadLibrary() },
+            onReloadLibrary = {
+                // Ayarlar değişmiş olabilir; filtreleri yeniden okuyup tara.
+                val minDuration = player.loadMinDurationSetting()
+                if (minDuration != minDurationSeconds) {
+                    // LaunchedEffect yeni süreyle taramayı başlatır.
+                    minDurationSeconds = minDuration
+                } else {
+                    library.refresh(selectedFolders, minDuration)
+                }
+            },
             onDeleteSong = { song ->
                 if (player.deleteSong(song)) {
-                    allAudioList = allAudioList.filter { it.id != song.id }
+                    library.removeSong(song.id)
                     favoriteIds = player.getFavorites()
                 }
             },

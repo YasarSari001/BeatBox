@@ -1146,7 +1146,7 @@ fun loadAudioFilesAndFolders(ctx: Context, minSec: Int, selected: Set<String>): 
                     val id = cursor.getLong(0)
                     val audioUri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id)
                     
-                    var audioFile = AudioFile(
+                    val audioFile = AudioFile(
                         id = id,
                         title = cursor.getString(1) ?: "Unknown",
                         artist = cursor.getString(2) ?: "Unknown",
@@ -1160,13 +1160,9 @@ fun loadAudioFilesAndFolders(ctx: Context, minSec: Int, selected: Set<String>): 
                             ?.takeIf { it.isNotBlank() && !it.equals("<unknown>", true) }
                     )
 
-                    // Dosya adından başlık-sanatçı çıkarıp ID3 etiketine yaz.
-                    // Bulunamazsa mevcut değer korunur, liste bozulmaz.
-                    val fixed = SongMetadataRepository.fixMetadataFromFilename(audioFile, ctx, path)
-                    if (fixed != null) {
-                        audioFile = fixed
-                    }
-                    
+                    // Dosya adı düzeltmesi burada yapılmaz; tarama hızlı kalır.
+                    // Etiketler gösterimden sonra arka planda ayrı bir geçişte
+                    // yazılır (bkz. LibraryState.startMetadataFix).
                     list.add(audioFile)
                 } catch (e: Exception) {
                     // Log individual file errors but continue processing
