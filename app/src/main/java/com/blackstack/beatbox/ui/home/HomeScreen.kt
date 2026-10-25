@@ -108,8 +108,7 @@ fun HomeScreen(
 
     PullToRefresh(
         isRefreshing = isRefreshing,
-        onRefresh = onRefresh,
-        strings = strings
+        onRefresh = onRefresh
     ) {
         LazyColumn(
             state = listState,

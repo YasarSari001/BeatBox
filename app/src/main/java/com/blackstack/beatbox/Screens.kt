@@ -3,8 +3,6 @@ package com.blackstack.beatbox
 import android.Manifest
 import android.app.Activity
 import android.content.Context
-import android.content.pm.PackageManager
-import android.os.Build
 import android.speech.RecognizerIntent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -26,7 +24,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
-import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import com.blackstack.beatbox.ui.components.AuroraBackground
 import com.blackstack.beatbox.ui.components.BeatBoxOverlayState
@@ -62,14 +59,8 @@ fun BeatBoxApp(
     var showOnboarding by remember { mutableStateOf(prefs.getBoolean("first_launch", true)) }
 
     if (showSplash) { SplashScreen(currentTheme) { showSplash = false }; return }
-    var hasPermission by remember {
-        mutableStateOf(
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
-                ContextCompat.checkSelfPermission(ctx, Manifest.permission.READ_MEDIA_AUDIO) == PackageManager.PERMISSION_GRANTED
-            else
-                ContextCompat.checkSelfPermission(ctx, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
-        )
-    }
+    var hasPermission by remember { mutableStateOf(hasAudioPermission(ctx)) }
+    RequestLegacyWritePermission(hasPermission)
     // Tempo görselleştirme anahtarı; mikrofon geri çağrısı da bunu açar.
     var tempoViz by remember {
         mutableStateOf(
@@ -116,7 +107,7 @@ fun BeatBoxApp(
     var isRefreshing by remember { mutableStateOf(false) }
 
     fun reloadLibrary() {
-        if (!hasPermission) return
+        if (!hasPermission || isRefreshing) return
         isLoading = true
         isRefreshing = true
         coroutineScope.launch {
@@ -275,7 +266,7 @@ fun BeatBoxApp(
                             PermissionScreen(strings) {
                                 permLauncher.launch(requiredAudioPermissions())
                             }
-                        } else if (isLoading) {
+                        } else if (isLoading && allAudioList.isEmpty()) {
                             BeatBoxSkeleton(Modifier.fillMaxSize())
                         } else {
                             BeatBoxTabContent(
@@ -397,11 +388,4 @@ fun BeatBoxApp(
     }
 }
 }
-
-/** Ses kütüphanesi izinleri; Android 13+ bildirim iznini de kapsar. */
-private fun requiredAudioPermissions(): Array<String> =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
-        arrayOf(Manifest.permission.READ_MEDIA_AUDIO, Manifest.permission.POST_NOTIFICATIONS)
-    else
-        arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
 

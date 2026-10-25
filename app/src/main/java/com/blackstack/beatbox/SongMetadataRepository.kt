@@ -1,7 +1,11 @@
 package com.blackstack.beatbox
 
+import android.content.ContentValues
 import android.content.Context
 import android.content.SharedPreferences
+import android.net.Uri
+import android.provider.MediaStore
+import android.provider.OpenableColumns
 import android.util.Log
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.core.content.edit
@@ -285,42 +289,164 @@ object SongMetadataRepository {
     }
 
     /**
-     * Dosya adından başlık ve sanatçıyı çıkarıp doğrudan MP3 dosyasının
-     * ID3 etiketine yazar. Başarılıysa güncellenmiş [AudioFile] kopyasını döner.
+     * Dosya adından başlık ve sanatçıyı çıkarıp doğrudan ses dosyasının
+     * etiketine (MP3 için ID3) yazar. Başarılıysa güncellenmiş [AudioFile]
+     * kopyasını döner.
      *
-     * Sadece `file://` URI'sine sahip dosyalarda çalışır; content URI'si
-     * (Scoped Storage / MediaStore) için yazma atlanır ve null döner.
+     * MediaStore taramasında URI `content://` olduğu için yazma iki yolla
+     * denenir:
+     * 1. MediaStore'un `DATA` sütunundan gerçek dosya yolu bulunursa doğrudan
+     *    dosyaya yazılır (Android 9 ve öncesinde WRITE_EXTERNAL_STORAGE ile).
+     * 2. Yol yoksa/yazılamıyorsa içerik geçici bir dosyaya kopyalanır, etiket
+     *    yazılır ve `openOutputStream(uri, "rwt")` ile geri kopyalanır.
      *
+     * Yazma başarısızsa null döner ve mevcut [AudioFile] değerleri korunur.
      * Dosya adı biçimi: "Sanatçı - Başlık.mp3" veya sadece "Başlık.mp3".
-     * Eşleşme/parçalanma başarısız olsa da mevcut [AudioFile] değeri bozulmaz.
      */
-    fun fixMetadataFromFilename(audio: AudioFile, context: Context): AudioFile? {
-        if (audio.uri.scheme != "file") return null
-        val path = audio.uri.path ?: return null
-        val file = File(path)
-        if (!file.exists()) return null
+    fun fixMetadataFromFilename(
+        audio: AudioFile,
+        context: Context,
+        knownPath: String? = null
+    ): AudioFile? {
+        if (audio.isOnline) return null
 
-        val name = file.nameWithoutExtension
-        val parts = name.split(" - ", limit = 2)
-        val artist = parts.firstOrNull()?.trim() ?: ""
-        val title = parts.getOrNull(1)?.trim() ?: parts.firstOrNull() ?: ""
+        val path = knownPath?.takeIf { it.isNotBlank() } ?: queryDataPath(context, audio.uri)
+        val fileName = path?.let { File(it).name }
+            ?: queryDisplayName(context, audio.uri)
+            ?: if (audio.uri.scheme == "file") audio.uri.lastPathSegment else null
+        val parsed = fileName
+            ?.substringBeforeLast('.', fileName)
+            ?.let(::parseFilenameMetadata)
+            ?: return null
 
-        if (title.isBlank() && artist.isBlank()) return null
+        // MediaStore zaten aynı değerleri taşıyorsa her taramada yeniden yazma.
+        if (!needsMetadataUpdate(audio.title, audio.artist, parsed)) return audio
 
-        val written = runCatching {
-            val taggedFile = AudioFileIO.read(file)
-            val tag = taggedFile.tagOrCreateAndSetDefault
-            if (title.isNotBlank()) tag.setField(FieldKey.TITLE, title)
-            if (artist.isNotBlank()) tag.setField(FieldKey.ARTIST, artist)
-            AudioFileIO.write(taggedFile)
-            true
-        }.getOrNull() == true
+        if (!writeTags(context, audio.uri, path, parsed)) {
+            Log.w("SongMetadata", "Etiket yazılamadı: ${audio.uri}")
+            return null
+        }
 
-        return if (written) {
-            audio.copy(
-                title = if (title.isNotBlank()) title else audio.title,
-                artist = if (artist.isNotBlank()) artist else audio.artist
-            )
-        } else null
+        // Bir sonraki tarama dosya adıyla aynı değerleri görsün diye MediaStore
+        // satırını da güncelle. Böylece yenileme sırasında eski başlık dönmez.
+        updateMediaStore(context, audio.uri, parsed)
+
+        return audio.copy(
+            title = parsed.title,
+            artist = parsed.artist ?: audio.artist
+        )
+    }
+
+    @Suppress("DEPRECATION")
+    private fun queryDataPath(context: Context, uri: Uri): String? {
+        if (uri.scheme != "content") return null
+        return runCatching {
+            context.contentResolver.query(
+                uri,
+                arrayOf(MediaStore.Audio.Media.DATA),
+                null,
+                null,
+                null
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            }
+        }.getOrNull()
+    }
+
+    private fun queryDisplayName(context: Context, uri: Uri): String? {
+        if (uri.scheme != "content") return null
+        return runCatching {
+            context.contentResolver.query(
+                uri,
+                arrayOf(OpenableColumns.DISPLAY_NAME),
+                null,
+                null,
+                null
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            }
+        }.getOrNull()
+    }
+
+    private fun writeTags(
+        context: Context,
+        uri: Uri,
+        knownPath: String?,
+        parsed: FilenameMetadata
+    ): Boolean {
+        val directFile = knownPath
+            ?.let(::File)
+            ?.takeIf { it.isFile && it.canWrite() }
+        if (directFile != null && writeTagsToFile(directFile, parsed)) return true
+
+        if (uri.scheme != "content") return false
+
+        // DATA yolu yoksa veya yazılamıyorsa geçici kopya üzerinden yaz.
+        val extension = knownPath
+            ?.substringAfterLast('.', "")
+            ?.takeIf { it.isNotBlank() }
+            ?: queryDisplayName(context, uri)
+                ?.substringAfterLast('.', "")
+                ?.takeIf { it.isNotBlank() }
+            ?: "mp3"
+        val temp = runCatching {
+            File.createTempFile("beatbox_tag_", ".$extension", context.cacheDir)
+        }.getOrNull() ?: return false
+
+        return try {
+            val copied = runCatching {
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    temp.outputStream().use { output -> input.copyTo(output) }
+                } != null
+            }.getOrDefault(false)
+            if (!copied) return false
+
+            if (!writeTagsToFile(temp, parsed)) return false
+
+            runCatching {
+                context.contentResolver.openOutputStream(uri, "rwt")?.use { output ->
+                    temp.inputStream().use { input -> input.copyTo(output) }
+                } != null
+            }.getOrDefault(false)
+        } catch (e: Exception) {
+            Log.w("SongMetadata", "İçerik URI'sine etiket yazılamadı: $uri", e)
+            false
+        } finally {
+            temp.delete()
+        }
+    }
+
+    private fun writeTagsToFile(file: File, parsed: FilenameMetadata): Boolean = runCatching {
+        val taggedFile = AudioFileIO.read(file)
+        val tag = taggedFile.tagOrCreateAndSetDefault
+        val currentTitle = runCatching { tag.getFirst(FieldKey.TITLE) }.getOrNull()
+        val currentArtist = runCatching { tag.getFirst(FieldKey.ARTIST) }.getOrNull()
+
+        if (currentTitle == parsed.title &&
+            (parsed.artist == null || currentArtist == parsed.artist)
+        ) {
+            return@runCatching true
+        }
+
+        tag.setField(FieldKey.TITLE, parsed.title)
+        parsed.artist?.let { tag.setField(FieldKey.ARTIST, it) }
+        AudioFileIO.write(taggedFile)
+        true
+    }.getOrElse { e ->
+        Log.w("SongMetadata", "Etiket dosyaya yazılamadı: ${file.name}", e)
+        false
+    }
+
+    private fun updateMediaStore(context: Context, uri: Uri, parsed: FilenameMetadata) {
+        if (uri.scheme != "content") return
+        val values = ContentValues().apply {
+            put(MediaStore.Audio.Media.TITLE, parsed.title)
+            parsed.artist?.let { put(MediaStore.Audio.Media.ARTIST, it) }
+        }
+        runCatching {
+            context.contentResolver.update(uri, values, null, null)
+        }.onFailure {
+            Log.w("SongMetadata", "MediaStore satırı güncellenemedi: $uri", it)
+        }
     }
 }

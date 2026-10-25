@@ -1162,7 +1162,7 @@ fun loadAudioFilesAndFolders(ctx: Context, minSec: Int, selected: Set<String>): 
 
                     // Dosya adından başlık-sanatçı çıkarıp ID3 etiketine yaz.
                     // Bulunamazsa mevcut değer korunur, liste bozulmaz.
-                    val fixed = SongMetadataRepository.fixMetadataFromFilename(audioFile, ctx)
+                    val fixed = SongMetadataRepository.fixMetadataFromFilename(audioFile, ctx, path)
                     if (fixed != null) {
                         audioFile = fixed
                     }

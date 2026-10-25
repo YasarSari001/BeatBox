@@ -90,8 +90,7 @@ fun PlaylistsScreen(
 
     PullToRefresh(
         isRefreshing = isRefreshing,
-        onRefresh = onRefresh,
-        strings = strings
+        onRefresh = onRefresh
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),

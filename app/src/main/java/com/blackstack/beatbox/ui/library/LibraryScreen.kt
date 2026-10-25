@@ -219,8 +219,7 @@ fun LibraryScreen(
 
     PullToRefresh(
         isRefreshing = isRefreshing,
-        onRefresh = onRefresh,
-        strings = strings
+        onRefresh = onRefresh
     ) {
         Box(Modifier.fillMaxSize()) {
             LazyColumn(
