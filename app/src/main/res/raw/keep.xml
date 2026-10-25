@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  google-services.json eklendiğinde google-services eklentisi bu string
+  kaynaklarını üretir. Firebase bunları çalışma zamanında adla okuduğu için
+  kaynak küçültücüsü (shrinkResources) tarafından silinmemelidir.
+  Dosya yokken de güvenlidir; tools:keep yalnızca var olan kaynakları korur.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@string/google_app_id,@string/gcm_defaultSenderId,@string/project_id,@string/firebase_database_url,@string/ga_trackingId,@string/google_api_key,@string/google_crash_reporting_api_key,@string/google_storage_bucket,@string/default_web_client_id" />

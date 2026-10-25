@@ -160,7 +160,7 @@ fun BeatBoxApp(
     var animationDirection by remember { mutableIntStateOf(1) }
     var sortOption by remember { mutableStateOf(SortOption.DATE) }
     var favoriteIds by remember { mutableStateOf(player.getFavorites()) }
-    var userProfile by remember { mutableStateOf(loadUserProfile(prefs)) }
+    var userProfile by remember { mutableStateOf(restoreSession(prefs, ctx)) }
 
     val avatarIcons = listOf(
         Icons.Rounded.Person,

@@ -6,6 +6,16 @@ plugins {
 }
 
 /**
+ * google-services.json yalnızca Firebase yapılandırıldığında uygulanır.
+ * Dosya yokken proje derlenmeye devam eder; giriş ekranı yapılandırma
+ * eksikliğini gösterir ve misafir girişi çalışır.
+ */
+val googleServicesFile = file("google-services.json")
+if (googleServicesFile.exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
+/**
  * API anahtarları kaynak kontrolüne ve APK içinde plaintext olarak giremez.
  *
  * MUSIXMATCH_API_KEY şu an boş bırakılmıştır: Musixmatch sağlayıcısı devre dışı
@@ -118,6 +128,14 @@ dependencies {
     implementation(libs.retrofit.converter.gson)
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
+
+    // Firebase Authentication (e-posta/şifre + Google)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
+    implementation(libs.kotlinx.coroutines.play.services)
 
     // Testing
     testImplementation(libs.kotest.runner.junit5)

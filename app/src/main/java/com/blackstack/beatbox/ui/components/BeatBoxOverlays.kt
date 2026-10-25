@@ -1,6 +1,7 @@
 package com.blackstack.beatbox.ui.components
 
 import com.blackstack.beatbox.*
+import com.blackstack.beatbox.auth.signOutFirebase
 import android.content.Context
 import android.content.SharedPreferences
 import android.widget.Toast
@@ -286,10 +287,13 @@ fun BeatBoxOverlays(
                 strings = strings,
                 onDismiss = { overlays.showAuth = false },
                 onLoginSuccess = { newUser ->
-                    onUserProfileChange(newUser)
-                    saveUserProfile(prefs, newUser)
+                    // Aynı e-posta ile daha önce yerel profil düzenlendiyse
+                    // bio ve avatar kaybolmasın; yeni oturumun kimliği korunur.
+                    val merged = mergeSessionProfile(userProfile, newUser)
+                    onUserProfileChange(merged)
+                    saveUserProfile(prefs, merged)
                     overlays.showAuth = false
-                    Toast.makeText(ctx, "Hoş geldiniz, ${newUser.displayName}!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "Hoş geldiniz, ${merged.displayName}!", Toast.LENGTH_SHORT).show()
                 }
             )
         }
@@ -306,6 +310,7 @@ fun BeatBoxOverlays(
                     Toast.makeText(ctx, "Profil güncellendi", Toast.LENGTH_SHORT).show()
                 },
                 onLogout = {
+                    signOutFirebase(ctx)
                     val loggedOut = UserProfile(isLoggedIn = false)
                     onUserProfileChange(loggedOut)
                     saveUserProfile(prefs, loggedOut)

@@ -37,6 +37,7 @@ enum class AppTheme(
 
 enum class AuthProvider(val label: String) {
     EMAIL("E-posta"),
+    GOOGLE("Google"),
     PHONE("Telefon"),
     GUEST("Misafir")
 }
