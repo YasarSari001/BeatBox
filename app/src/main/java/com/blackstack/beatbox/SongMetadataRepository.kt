@@ -21,6 +21,8 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.security.MessageDigest
 import java.util.Collections
+import org.jaudiotagger.audio.AudioFileIO
+import org.jaudiotagger.tag.FieldKey
 
 /**
  * Yerel şarkıların eksik sanatçı adını ve albüm kapağını çevrim içi kaynaklardan
@@ -280,5 +282,45 @@ object SongMetadataRepository {
             withContext(Dispatchers.Main) { resolvedArtwork[audio.id] = path }
         }
         return path
+    }
+
+    /**
+     * Dosya adından başlık ve sanatçıyı çıkarıp doğrudan MP3 dosyasının
+     * ID3 etiketine yazar. Başarılıysa güncellenmiş [AudioFile] kopyasını döner.
+     *
+     * Sadece `file://` URI'sine sahip dosyalarda çalışır; content URI'si
+     * (Scoped Storage / MediaStore) için yazma atlanır ve null döner.
+     *
+     * Dosya adı biçimi: "Sanatçı - Başlık.mp3" veya sadece "Başlık.mp3".
+     * Eşleşme/parçalanma başarısız olsa da mevcut [AudioFile] değeri bozulmaz.
+     */
+    fun fixMetadataFromFilename(audio: AudioFile, context: Context): AudioFile? {
+        if (audio.uri.scheme != "file") return null
+        val path = audio.uri.path ?: return null
+        val file = File(path)
+        if (!file.exists()) return null
+
+        val name = file.nameWithoutExtension
+        val parts = name.split(" - ", limit = 2)
+        val artist = parts.firstOrNull()?.trim() ?: ""
+        val title = parts.getOrNull(1)?.trim() ?: parts.firstOrNull() ?: ""
+
+        if (title.isBlank() && artist.isBlank()) return null
+
+        val written = runCatching {
+            val taggedFile = AudioFileIO.read(file)
+            val tag = taggedFile.tagOrCreateAndSetDefault
+            if (title.isNotBlank()) tag.setField(FieldKey.TITLE, title)
+            if (artist.isNotBlank()) tag.setField(FieldKey.ARTIST, artist)
+            AudioFileIO.write(taggedFile)
+            true
+        }.getOrNull() == true
+
+        return if (written) {
+            audio.copy(
+                title = if (title.isNotBlank()) title else audio.title,
+                artist = if (artist.isNotBlank()) artist else audio.artist
+            )
+        } else null
     }
 }
