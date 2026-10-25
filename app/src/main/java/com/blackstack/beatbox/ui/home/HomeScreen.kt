@@ -17,6 +17,7 @@ import com.blackstack.beatbox.AudioFile
 import com.blackstack.beatbox.Playlist
 import com.blackstack.beatbox.Strings
 import com.blackstack.beatbox.groupSongsByArtist
+import com.blackstack.beatbox.ui.components.PullToRefresh
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 /**
@@ -44,7 +45,10 @@ fun HomeScreen(
     visualizerLevel: Float,
     visualizerWaveform: FloatArray,
     /** Compact top bar görünürlüğü değişikliklerinde çağrılır. */
-    onCompactBarVisibleChange: ((Boolean) -> Unit)? = null
+    onCompactBarVisibleChange: ((Boolean) -> Unit)? = null,
+    /** Aşağı çekerek kitaplığı yenile. */
+    onRefresh: () -> Unit = {},
+    isRefreshing: Boolean = false
 ) {
     val prefs = remember(ctx) {
         ctx.getSharedPreferences("BeatBoxSettings", Context.MODE_PRIVATE)
@@ -102,91 +106,97 @@ fun HomeScreen(
         prefs.getLong("stats_total_minutes", 0L)
     }
 
-    LazyColumn(
-        state = listState,
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = 8.dp, bottom = 132.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+    PullToRefresh(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        strings = strings
     ) {
-        item(key = "greeting") {
-            HomeGreeting(
-                strings = strings,
-                songCount = allAudioList.size,
-                playlistCount = playlists.size,
-                onShuffleAll = onShuffleAll,
-                listState = listState
-            )
-        }
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(top = 8.dp, bottom = 132.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            item(key = "greeting") {
+                HomeGreeting(
+                    strings = strings,
+                    songCount = allAudioList.size,
+                    playlistCount = playlists.size,
+                    onShuffleAll = onShuffleAll,
+                    listState = listState
+                )
+            }
 
-        item(key = "hero") {
-            HomeHero(
-                currentAudio = currentAudio,
-                isPlaying = isPlaying,
-                isFavorite = currentAudio?.let { favoriteIds.contains(it.id.toString()) } == true,
-                progress = progress,
-                onPlayPause = onPlayPause,
-                onOpenPlayer = onOpenPlayer,
-                onShuffleAll = onShuffleAll,
-                songCount = allAudioList.size,
-                strings = strings
-            )
-        }
-
-        if (topSongs.isNotEmpty()) {
-            item(key = "for_you") {
-                HomeForYouSection(
-                    songs = topSongs,
-                    currentAudioId = currentAudioId,
+            item(key = "hero") {
+                HomeHero(
+                    currentAudio = currentAudio,
                     isPlaying = isPlaying,
-                    visualizerLevel = visualizerLevel,
-                    visualizerWaveform = visualizerWaveform,
-                    strings = strings,
-                    onPlaySong = onPlaySong
+                    isFavorite = currentAudio?.let { favoriteIds.contains(it.id.toString()) } == true,
+                    progress = progress,
+                    onPlayPause = onPlayPause,
+                    onOpenPlayer = onOpenPlayer,
+                    onShuffleAll = onShuffleAll,
+                    songCount = allAudioList.size,
+                    strings = strings
                 )
             }
-        }
 
-        if (recentlyPlayed.size >= 2) {
-            item(key = "recently_played") {
-                HomeRecentlyPlayedSection(
-                    songs = recentlyPlayed,
-                    currentAudioId = currentAudioId,
-                    strings = strings,
-                    onPlaySong = onPlaySong
-                )
+            if (topSongs.isNotEmpty()) {
+                item(key = "for_you") {
+                    HomeForYouSection(
+                        songs = topSongs,
+                        currentAudioId = currentAudioId,
+                        isPlaying = isPlaying,
+                        visualizerLevel = visualizerLevel,
+                        visualizerWaveform = visualizerWaveform,
+                        strings = strings,
+                        onPlaySong = onPlaySong
+                    )
+                }
             }
-        }
 
-        if (recentlyAdded.isNotEmpty()) {
-            item(key = "recently_added") {
-                HomeRecentlyAddedSection(
-                    songs = recentlyAdded,
-                    currentAudioId = currentAudioId,
-                    strings = strings,
-                    onPlaySong = onPlaySong
-                )
+            if (recentlyPlayed.size >= 2) {
+                item(key = "recently_played") {
+                    HomeRecentlyPlayedSection(
+                        songs = recentlyPlayed,
+                        currentAudioId = currentAudioId,
+                        strings = strings,
+                        onPlaySong = onPlaySong
+                    )
+                }
             }
-        }
 
-        if (artists.isNotEmpty()) {
-            item(key = "artists") {
-                HomeArtistsSection(
-                    artists = artists,
-                    strings = strings,
-                    onPlayArtist = onPlayArtist
-                )
+            if (recentlyAdded.isNotEmpty()) {
+                item(key = "recently_added") {
+                    HomeRecentlyAddedSection(
+                        songs = recentlyAdded,
+                        currentAudioId = currentAudioId,
+                        strings = strings,
+                        onPlaySong = onPlaySong
+                    )
+                }
             }
-        }
 
-        if (totalMinutes > 0L) {
-            item(key = "stats") {
-                HomeListeningStat(totalMinutes = totalMinutes, strings = strings)
+            if (artists.isNotEmpty()) {
+                item(key = "artists") {
+                    HomeArtistsSection(
+                        artists = artists,
+                        strings = strings,
+                        onPlayArtist = onPlayArtist
+                    )
+                }
             }
-        }
 
-        if (allAudioList.isEmpty()) {
-            item(key = "empty") {
-                HomeEmptyLibrary(strings = strings)
+            if (totalMinutes > 0L) {
+                item(key = "stats") {
+                    HomeListeningStat(totalMinutes = totalMinutes, strings = strings)
+                }
+            }
+
+            if (allAudioList.isEmpty()) {
+                item(key = "empty") {
+                    HomeEmptyLibrary(strings = strings)
+                }
             }
         }
     }

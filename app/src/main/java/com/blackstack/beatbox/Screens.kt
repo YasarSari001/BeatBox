@@ -113,22 +113,28 @@ fun BeatBoxApp(
     var selectedFolders by remember { mutableStateOf(player.loadSelectedFolders()) }
     var minDurationSeconds by remember { mutableIntStateOf(player.loadMinDurationSetting()) }
     var isLoading by remember { mutableStateOf(true) }
+    var isRefreshing by remember { mutableStateOf(false) }
 
     fun reloadLibrary() {
         if (!hasPermission) return
         isLoading = true
+        isRefreshing = true
         coroutineScope.launch {
-            val (loaded, folders) = withContext(Dispatchers.IO) {
-                loadAudioFilesAndFolders(ctx, minDurationSeconds, selectedFolders)
-            }
-            // Daha önce çözülen sanatçı ve kapakları hemen uygula; ardından
-            // eksik kalanları arka planda çevrim içi tamamla.
-            val enriched = SongMetadataRepository.applyCached(ctx, loaded)
-            allAudioList = enriched
-            availableFolders = folders
-            isLoading = false
-            SongMetadataRepository.enrichUnknownArtists(ctx, enriched) { id, artist, artworkPath ->
-                allAudioList = SongMetadataRepository.applyResolved(allAudioList, id, artist, artworkPath)
+            try {
+                val (loaded, folders) = withContext(Dispatchers.IO) {
+                    loadAudioFilesAndFolders(ctx, minDurationSeconds, selectedFolders)
+                }
+                // Daha önce çözülen sanatçı ve kapakları hemen uygula; ardından
+                // eksik kalanları arka planda çevrim içi tamamla.
+                val enriched = SongMetadataRepository.applyCached(ctx, loaded)
+                allAudioList = enriched
+                availableFolders = folders
+                isLoading = false
+                SongMetadataRepository.enrichUnknownArtists(ctx, enriched) { id, artist, artworkPath ->
+                    allAudioList = SongMetadataRepository.applyResolved(allAudioList, id, artist, artworkPath)
+                }
+            } finally {
+                isRefreshing = false
             }
         }
     }
@@ -296,7 +302,9 @@ fun BeatBoxApp(
                                     playlists = list
                                     player.savePlaylists(list)
                                 },
-                                onHomeCompactBarVisibleChange = { compactTopBarVisible = it }
+                                onHomeCompactBarVisibleChange = { compactTopBarVisible = it },
+                                onRefresh = { reloadLibrary() },
+                                isRefreshing = isRefreshing
                             )
                         }
                     }

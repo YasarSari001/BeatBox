@@ -15,6 +15,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+
 import com.blackstack.beatbox.ui.home.HomeScreen
 import com.blackstack.beatbox.ui.library.LibraryScreen
 import com.blackstack.beatbox.ui.playlists.PlaylistsScreen
@@ -49,7 +50,10 @@ fun BeatBoxTabContent(
     onFavoriteIdsChange: (Set<String>) -> Unit,
     onPlaylistsChange: (List<Playlist>) -> Unit,
     /** Ana sayfa compact top bar görünürlüğü değiştiğinde çağrılır. */
-    onHomeCompactBarVisibleChange: ((Boolean) -> Unit)? = null
+    onHomeCompactBarVisibleChange: ((Boolean) -> Unit)? = null,
+    /** Kitaplık yenilendiğinde çağrılır (aşağı çekerek yenile). */
+    onRefresh: () -> Unit = {},
+    isRefreshing: Boolean = false
 ) {
     AnimatedContent(
         targetState = selectedTab,
@@ -120,7 +124,9 @@ fun BeatBoxTabContent(
                     ctx = ctx,
                     visualizerLevel = visualizerLevel,
                     visualizerWaveform = visualizerWaveform,
-                    onCompactBarVisibleChange = onHomeCompactBarVisibleChange
+                    onCompactBarVisibleChange = onHomeCompactBarVisibleChange,
+                    onRefresh = onRefresh,
+                    isRefreshing = isRefreshing
                 )
             }
             // Tab 1 = Playlists (Çalma Listeleri)
@@ -135,7 +141,9 @@ fun BeatBoxTabContent(
                     onPlaylistDelete = { p -> onPlaylistsChange(playlists.filter { it.id != p.id }) },
                     onPlaylistEdit = { overlays.editPlaylist = it },
                     onPlaylistsChange = { onPlaylistsChange(it) },
-                    onCreatePlaylist = { overlays.showCreatePlaylist = true }
+                    onCreatePlaylist = { overlays.showCreatePlaylist = true },
+                    onRefresh = onRefresh,
+                    isRefreshing = isRefreshing
                 )
             }
             // Tab 2 = Library (Kütüphane)
@@ -169,7 +177,9 @@ fun BeatBoxTabContent(
                         onCurrentAudioChange(a)
                         player.playAudio(a)
                         updateSongStats(prefs, a)
-                    }
+                    },
+                    onRefresh = onRefresh,
+                    isRefreshing = isRefreshing
                 )
             }
         }

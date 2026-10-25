@@ -29,6 +29,7 @@ import com.blackstack.beatbox.Strings
 import com.blackstack.beatbox.groupSongsByArtist
 import com.blackstack.beatbox.ui.components.BeatBoxSongRow
 import com.blackstack.beatbox.ui.components.EmptyArtKind
+import com.blackstack.beatbox.ui.components.PullToRefresh
 import kotlinx.coroutines.launch
 
 /**
@@ -55,8 +56,8 @@ private const val LIST_HEADER_ITEMS = 2
  * Kütüphane sekmesi.
  *
  * Arama ve sıralama dışarıdan gelir; ekran filtreleme, A-Z gezinme, seçim
- * ve sunumdan sorumludur. Kalıcı yazma işlemleri geri çağrılarla kabuğa
- * bildirilir.
+ * ve sunumdan sorumludur. Kalıcı yazma işlemleri geri ça output.ırlarıyla
+ * kabuğa bildirilir.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -72,7 +73,9 @@ fun LibraryScreen(
     onAddFavorites: (List<AudioFile>) -> Unit,
     onAddToQueue: (List<AudioFile>) -> Unit,
     onDeleteSong: (AudioFile) -> Unit,
-    onSongClick: (AudioFile, List<AudioFile>) -> Unit
+    onSongClick: (AudioFile, List<AudioFile>) -> Unit,
+    onRefresh: () -> Unit = {},
+    isRefreshing: Boolean = false
 ) {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -214,58 +217,102 @@ fun LibraryScreen(
         }
     }
 
-    Box(Modifier.fillMaxSize()) {
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = 8.dp, bottom = 132.dp),
-            verticalArrangement = Arrangement.spacedBy(0.dp)
-        ) {
-            item(key = "library_hero") {
-                LibraryHero(
-                    songCount = allAudioList.size,
-                    favoriteCount = favoriteIds.size,
-                    totalMinutes = totalMinutes,
-                    strings = strings,
-                    onShuffle = {
-                        if (songsSorted.isNotEmpty()) {
-                            val shuffled = songsSorted.shuffled()
-                            onSongClick(shuffled.first(), shuffled)
+    PullToRefresh(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        strings = strings
+    ) {
+        Box(Modifier.fillMaxSize()) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = 8.dp, bottom = 132.dp),
+                verticalArrangement = Arrangement.spacedBy(0.dp)
+            ) {
+                item(key = "library_hero") {
+                    LibraryHero(
+                        songCount = allAudioList.size,
+                        favoriteCount = favoriteIds.size,
+                        totalMinutes = totalMinutes,
+                        strings = strings,
+                        onShuffle = {
+                            if (songsSorted.isNotEmpty()) {
+                                val shuffled = songsSorted.shuffled()
+                                onSongClick(shuffled.first(), shuffled)
+                            }
+                        }
+                    )
+                }
+
+                stickyHeader(key = "library_filters") {
+                    LibraryFilterBar(
+                        filter = filter,
+                        onFilterChange = { filter = it },
+                        compact = compact,
+                        onToggleDensity = { compact = !compact },
+                        strings = strings,
+                        selectionCount = selection.size,
+                        onClearSelection = { selection = emptySet() },
+                        onPlaySelected = { playSelection() },
+                        onFavoriteSelected = { onAddFavorites(selectedSongs) },
+                        onQueueSelected = { onAddToQueue(selectedSongs) }
+                    )
+                }
+
+                when (filter) {
+                    LibraryFilter.ALL -> {
+                        if (alphabetical.isEmpty()) {
+                            item(key = "empty") {
+                                LibraryEmpty(
+                                    title = emptyTitle(allAudioList, filter, strings),
+                                    kind = emptyArtKind(allAudioList, filter, search)
+                                )
+                            }
+                        } else {
+                            songGroups.forEach { (letter, songs) ->
+                                item(key = "letter-$letter") {
+                                    LibraryLetterHeader(letter)
+                                }
+                                items(songs, key = { "song-${it.id}" }) { song ->
+                                    LibrarySongRow(
+                                        song = song,
+                                        list = displaySongs,
+                                        strings = strings,
+                                        currentAudioId = currentAudioId,
+                                        isPlaying = isPlaying,
+                                        favoriteIds = favoriteIds,
+                                        selection = selection,
+                                        selectionMode = selectionMode,
+                                        compact = compact,
+                                        onFavClick = onFavClick,
+                                        onDeleteSong = onDeleteSong,
+                                        onSongClick = onSongClick,
+                                        onToggleSelection = ::toggleSelection,
+                                        onLongPress = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            if (selection.isEmpty()) {
+                                                selection = setOf(song.id)
+                                            } else {
+                                                toggleSelection(song)
+                                            }
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
-                )
-            }
 
-            stickyHeader(key = "library_filters") {
-                LibraryFilterBar(
-                    filter = filter,
-                    onFilterChange = { filter = it },
-                    compact = compact,
-                    onToggleDensity = { compact = !compact },
-                    strings = strings,
-                    selectionCount = selection.size,
-                    onClearSelection = { selection = emptySet() },
-                    onPlaySelected = { playSelection() },
-                    onFavoriteSelected = { onAddFavorites(selectedSongs) },
-                    onQueueSelected = { onAddToQueue(selectedSongs) }
-                )
-            }
-
-            when (filter) {
-                LibraryFilter.ALL -> {
-                    if (alphabetical.isEmpty()) {
-                        item(key = "empty") {
-                            LibraryEmpty(
-                                title = emptyTitle(allAudioList, filter, strings),
-                                kind = emptyArtKind(allAudioList, filter, search)
-                            )
-                        }
-                    } else {
-                        songGroups.forEach { (letter, songs) ->
-                            item(key = "letter-$letter") {
-                                LibraryLetterHeader(letter)
+                    LibraryFilter.SONGS,
+                    LibraryFilter.FAVORITES -> {
+                        if (displaySongs.isEmpty()) {
+                            item(key = "empty") {
+                                LibraryEmpty(
+                                    title = emptyTitle(allAudioList, filter, strings),
+                                    kind = emptyArtKind(allAudioList, filter, search)
+                                )
                             }
-                            items(songs, key = { "song-${it.id}" }) { song ->
+                        } else {
+                            items(displaySongs, key = { "song-${it.id}" }) { song ->
                                 LibrarySongRow(
                                     song = song,
                                     list = displaySongs,
@@ -292,126 +339,88 @@ fun LibraryScreen(
                             }
                         }
                     }
-                }
 
-                LibraryFilter.SONGS,
-                LibraryFilter.FAVORITES -> {
-                    if (displaySongs.isEmpty()) {
-                        item(key = "empty") {
-                            LibraryEmpty(
-                                title = emptyTitle(allAudioList, filter, strings),
-                                kind = emptyArtKind(allAudioList, filter, search)
-                            )
-                        }
-                    } else {
-                        items(displaySongs, key = { "song-${it.id}" }) { song ->
-                            LibrarySongRow(
-                                song = song,
-                                list = displaySongs,
-                                strings = strings,
-                                currentAudioId = currentAudioId,
-                                isPlaying = isPlaying,
-                                favoriteIds = favoriteIds,
-                                selection = selection,
-                                selectionMode = selectionMode,
-                                compact = compact,
-                                onFavClick = onFavClick,
-                                onDeleteSong = onDeleteSong,
-                                onSongClick = onSongClick,
-                                onToggleSelection = ::toggleSelection,
-                                onLongPress = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    if (selection.isEmpty()) {
-                                        selection = setOf(song.id)
-                                    } else {
-                                        toggleSelection(song)
+                    LibraryFilter.ALBUMS -> {
+                        if (albums.isEmpty()) {
+                            item(key = "empty") {
+                                LibraryEmpty(
+                                    title = emptyTitle(allAudioList, filter, strings),
+                                    kind = emptyArtKind(allAudioList, filter, search)
+                                )
+                            }
+                        } else {
+                            items(albums, key = { it.key }) { album ->
+                                LibraryAlbumRow(
+                                    album = album,
+                                    strings = strings,
+                                    onClick = {
+                                        onSongClick(album.songs.first(), album.songs)
                                     }
-                                }
-                            )
+                                )
+                            }
                         }
                     }
-                }
 
-                LibraryFilter.ALBUMS -> {
-                    if (albums.isEmpty()) {
-                        item(key = "empty") {
-                            LibraryEmpty(
-                                title = emptyTitle(allAudioList, filter, strings),
-                                kind = emptyArtKind(allAudioList, filter, search)
-                            )
-                        }
-                    } else {
-                        items(albums, key = { it.key }) { album ->
-                            LibraryAlbumRow(
-                                album = album,
-                                strings = strings,
-                                onClick = {
-                                    onSongClick(album.songs.first(), album.songs)
-                                }
-                            )
+                    LibraryFilter.ARTISTS -> {
+                        if (artists.isEmpty()) {
+                            item(key = "empty") {
+                                LibraryEmpty(
+                                    title = emptyTitle(allAudioList, filter, strings),
+                                    kind = emptyArtKind(allAudioList, filter, search)
+                                )
+                            }
+                        } else {
+                            items(artists, key = { "artist-${it.key}" }) { entry ->
+                                LibraryArtistRow(
+                                    name = entry.key,
+                                    songs = entry.value,
+                                    strings = strings,
+                                    onClick = {
+                                        onSongClick(entry.value.first(), entry.value)
+                                    }
+                                )
+                            }
                         }
                     }
-                }
 
-                LibraryFilter.ARTISTS -> {
-                    if (artists.isEmpty()) {
-                        item(key = "empty") {
-                            LibraryEmpty(
-                                title = emptyTitle(allAudioList, filter, strings),
-                                kind = emptyArtKind(allAudioList, filter, search)
-                            )
-                        }
-                    } else {
-                        items(artists, key = { "artist-${it.key}" }) { entry ->
-                            LibraryArtistRow(
-                                name = entry.key,
-                                songs = entry.value,
-                                strings = strings,
-                                onClick = {
-                                    onSongClick(entry.value.first(), entry.value)
-                                }
-                            )
-                        }
-                    }
-                }
-
-                LibraryFilter.FOLDERS -> {
-                    if (folders.isEmpty()) {
-                        item(key = "empty") {
-                            LibraryEmpty(
-                                title = emptyTitle(allAudioList, filter, strings),
-                                kind = emptyArtKind(allAudioList, filter, search)
-                            )
-                        }
-                    } else {
-                        items(folders, key = { "folder-row-${it.name}" }) { folder ->
-                            LibraryFolderRow(
-                                folder = folder,
-                                strings = strings,
-                                onClick = {
-                                    onSongClick(folder.songs.first(), folder.songs)
-                                }
-                            )
+                    LibraryFilter.FOLDERS -> {
+                        if (folders.isEmpty()) {
+                            item(key = "empty") {
+                                LibraryEmpty(
+                                    title = emptyTitle(allAudioList, filter, strings),
+                                    kind = emptyArtKind(allAudioList, filter, search)
+                                )
+                            }
+                        } else {
+                            items(folders, key = { "folder-row-${it.name}" }) { folder ->
+                                LibraryFolderRow(
+                                    folder = folder,
+                                    strings = strings,
+                                    onClick = {
+                                        onSongClick(folder.songs.first(), folder.songs)
+                                    }
+                                )
+                            }
                         }
                     }
                 }
             }
-        }
 
-        if (letterAnchors.isNotEmpty() && !selectionMode) {
-            AlphabetScrubber(
-                letters = letterAnchors.keys.toList(),
-                onLetterSelected = { letter ->
-                    letterAnchors[letter]?.let { index ->
-                        scope.launch {
-                            listState.scrollToItem(index, stickyOffsetPx)
+            if (letterAnchors.isNotEmpty() && !selectionMode) {
+                AlphabetScrubber(
+                    letters = letterAnchors.keys.toList(),
+                    onLetterSelected = { letter ->
+                        letterAnchors[letter]?.let { index ->
+                            scope.launch {
+                                listState.scrollToItem(index, stickyOffsetPx)
+                            }
                         }
-                    }
-                },
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = 1.dp)
-            )
+                    },
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(end = 1.dp)
+                )
+            }
         }
     }
 }

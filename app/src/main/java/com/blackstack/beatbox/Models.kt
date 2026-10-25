@@ -498,6 +498,11 @@ class Strings(val lang: AppLanguage) {
             "de" to "Startseite", "it" to "Home", "pt" to "Início", "ru" to "Главная",
             "ja" to "ホーム", "zh" to "主页", "ar" to "الرئيسية", "ko" to "홈"
         ),
+        "refresh" to mapOf(
+            "en" to "Refresh", "tr" to "Yenile", "es" to "Actualizar", "fr" to "Rafraîchir",
+            "de" to "Aktualisieren", "it" to "Aggiorna", "pt" to "Atualizar", "ru" to "Обновить",
+            "ja" to "更新", "zh" to "刷新", "ar" to "تحديث", "ko" to "새로고침"
+        ),
         "songs_count" to mapOf(
             "en" to "Songs", "tr" to "Şarkı", "es" to "Canciones", "fr" to "Chansons",
             "de" to "Lieder", "it" to "Canzoni", "pt" to "Músicas", "ru" to "Песни",
