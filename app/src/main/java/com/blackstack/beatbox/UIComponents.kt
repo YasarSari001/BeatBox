@@ -5,7 +5,6 @@ import android.content.ContentUris
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.media.MediaMetadataRetriever
@@ -874,6 +873,7 @@ private fun formatDuration(millis: Long): String {
 @Composable fun AlbumArtImage(a: AudioFile, modifier: Modifier = Modifier, isHQ: Boolean = false) {
     val ctx = LocalContext.current
     val resolvedPath = SongMetadataRepository.resolvedArtwork[a.id]
+    val targetSize = if (isHQ) 256 else 96
     var bmp by remember(a.id, a.artworkPath, resolvedPath) {
         mutableStateOf<Bitmap?>(AlbumArtCache.bitmapCache.get(a.id))
     }
@@ -900,16 +900,12 @@ private fun formatDuration(millis: Long): String {
                         )
                         bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                             ctx.contentResolver.loadThumbnail(
-                                uri, 
-                                android.util.Size(
-                                    if (isHQ) 256 else 96,
-                                    if (isHQ) 256 else 96
-                                ), 
+                                uri,
+                                android.util.Size(targetSize, targetSize),
                                 null
                             )
                         } else {
-                            @Suppress("DEPRECATION") 
-                            MediaStore.Images.Media.getBitmap(ctx.contentResolver, uri)
+                            ArtworkDecoder.decode(ctx, uri, targetSize)
                         }
                     } catch (_: Exception) {}
                 }
@@ -919,16 +915,18 @@ private fun formatDuration(millis: Long): String {
                     try {
                         ctx.contentResolver.openFileDescriptor(a.uri, "r")?.use { pfd ->
                             val retriever = MediaMetadataRetriever()
-                            retriever.setDataSource(pfd.fileDescriptor)
-                            val art = retriever.embeddedPicture
-                            if (art != null) {
-                                val options = BitmapFactory.Options().apply {
-                                    inSampleSize = if (isHQ) 2 else 4
-                                    inPreferredConfig = Bitmap.Config.RGB_565
+                            try {
+                                retriever.setDataSource(pfd.fileDescriptor)
+                                val art = retriever.embeddedPicture
+                                if (art != null) {
+                                    bitmap = ArtworkDecoder.decode(art, targetSize)
                                 }
-                                bitmap = BitmapFactory.decodeByteArray(art, 0, art.size, options)
+                            } finally {
+                                try {
+                                    retriever.release()
+                                } catch (_: Exception) {
+                                }
                             }
-                            retriever.release()
                         }
                     } catch (_: Exception) {}
                 }
@@ -992,20 +990,8 @@ private fun formatDuration(millis: Long): String {
 }
 
 /** Disk önbelleğindeki kapağı liste boyutuna uygun şekilde çözer. */
-private fun decodeCachedArtwork(path: String, isHQ: Boolean): Bitmap? = try {
-    val file = File(path)
-    if (!file.exists()) {
-        null
-    } else {
-        val options = BitmapFactory.Options().apply {
-            inSampleSize = if (isHQ) 1 else 2
-            inPreferredConfig = Bitmap.Config.RGB_565
-        }
-        BitmapFactory.decodeFile(file.absolutePath, options)
-    }
-} catch (_: Exception) {
-    null
-}
+private fun decodeCachedArtwork(path: String, isHQ: Boolean): Bitmap? =
+    ArtworkDecoder.decode(File(path), if (isHQ) 256 else 96)
 
 // Generates a pleasant gradient based on song title/artist to use when album art is missing
 private fun colorFromString(seed: String): Color {

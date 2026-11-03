@@ -558,7 +558,9 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         // Clear service callbacks to avoid leaking the Activity
         try {
             musicService?.onSongComplete = null
+            musicService?.onPrevRequested = null
             musicService?.onPlaybackStateChanged = null
+            musicService?.onAudioChanged = null
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -579,6 +581,11 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        trimImageCaches(level)
     }
 }
 

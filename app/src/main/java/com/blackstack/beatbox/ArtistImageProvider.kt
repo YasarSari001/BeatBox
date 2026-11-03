@@ -3,7 +3,6 @@ package com.blackstack.beatbox
 import androidx.core.content.edit
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.util.Log
 import android.util.LruCache
 import androidx.compose.animation.fadeIn
@@ -58,13 +57,15 @@ object ArtistImageProvider {
     // Limit concurrent artist photo downloads to 4
     private val downloadSemaphore = Semaphore(4)
 
-    // Memory cache for decoded artist bitmaps
+    // Memory cache for decoded artist bitmaps. Eskiden heap'in 1/8'iydi;
+    // büyük fotoğraflarda gereksiz yer tutuyordu. 8 MB, 256 px thumbnail
+    // boyutunda ~64 sanatçı fotoğrafı tutar.
     private val maxMemory = (Runtime.getRuntime().maxMemory() / 1024).toInt()
-    private val cacheSize = maxMemory / 8 // Use 1/8th of available memory for cache
+    private val cacheSize = (maxMemory / 16).coerceAtMost(8 * 1024)
 
     val bitmapCache = object : LruCache<String, Bitmap>(cacheSize) {
         override fun sizeOf(key: String, value: Bitmap): Int {
-            return value.byteCount / 1024
+            return (value.byteCount / 1024).coerceAtLeast(1)
         }
     }
 
@@ -158,11 +159,8 @@ object ArtistImageProvider {
                         if (response.isSuccessful) {
                             val bytes = response.body?.bytes()
                             if (bytes != null && bytes.isNotEmpty()) {
-                                val options = BitmapFactory.Options().apply {
-                                    inSampleSize = if (isHQ) 1 else 2
-                                    inPreferredConfig = Bitmap.Config.RGB_565
-                                }
-                                val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
+                                val targetSize = if (isHQ) 512 else 256
+                                val bitmap = ArtworkDecoder.decode(bytes, targetSize)
                                 if (bitmap != null) {
                                     bitmapCache.put(cacheKey, bitmap)
                                     return@withContext bitmap

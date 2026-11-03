@@ -8,6 +8,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.BroadcastReceiver
+import android.content.ComponentCallbacks2
 import android.content.ComponentName
 import android.content.ContentUris
 import android.content.Context
@@ -15,7 +16,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.database.ContentObserver
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.media.AudioAttributes
 import android.media.MediaMetadataRetriever
@@ -33,7 +33,6 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.SystemClock
-import android.provider.MediaStore
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
@@ -44,9 +43,31 @@ import androidx.core.app.ServiceCompat
 import androidx.media.session.MediaButtonReceiver
 import kotlinx.coroutines.*
 
-// Optimize bitmap cache size to prevent OutOfMemoryError (shared across app)
-val bitmapCache = object : LruCache<Long, Bitmap>((Runtime.getRuntime().maxMemory() / 1024 / 16).toInt()) {
+// Albüm kapağı cache'i: liste/thumbnail bitmap'leri için sabit üst sınır.
+// Eskiden heap'in 1/16'sıydı; büyük kapaklarda tek bir bitmap sınırı aşıp
+// diğerlerini boşaltabiliyordu. 12 MB, 512 px kapaklarda ~24 görsel tutar.
+val bitmapCache = object : LruCache<Long, Bitmap>(
+    (Runtime.getRuntime().maxMemory() / 1024 / 24).coerceAtMost(12L * 1024).toInt()
+) {
     override fun sizeOf(key: Long, bitmap: Bitmap): Int = (bitmap.byteCount / 1024).coerceAtLeast(1)
+}
+
+/**
+ * Sistem bellek baskısı bildirdiğinde görsel cache'lerini küçültür.
+ * Activity ve Service aynı anda çağırabilir; işlem idempotenttir.
+ */
+@Suppress("DEPRECATION")
+fun trimImageCaches(level: Int) {
+    when {
+        level >= ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN -> {
+            bitmapCache.evictAll()
+            ArtistImageProvider.bitmapCache.evictAll()
+        }
+        level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW -> {
+            bitmapCache.trimToSize(bitmapCache.maxSize() / 2)
+            ArtistImageProvider.bitmapCache.trimToSize(ArtistImageProvider.bitmapCache.maxSize() / 2)
+        }
+    }
 }
 
 
@@ -948,14 +969,19 @@ class MediaPlaybackService : Service(), AudioManager.OnAudioFocusChangeListener 
         return try {
             // First try: Load from album art URI
             val uri = ContentUris.withAppendedId("content://media/external/audio/albumart".toUri(), audio.albumId)
-            val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                contentResolver.loadThumbnail(uri, android.util.Size(512, 512), null)
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                val source = ImageDecoder.createSource(contentResolver, uri)
-                ImageDecoder.decodeBitmap(source)
-            } else {
-                @Suppress("DEPRECATION") 
-                MediaStore.Images.Media.getBitmap(contentResolver, uri)
+            val bitmap = when {
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
+                    contentResolver.loadThumbnail(uri, android.util.Size(512, 512), null)
+                }
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.P -> {
+                    val source = ImageDecoder.createSource(contentResolver, uri)
+                    ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+                        decoder.setTargetSampleSize(
+                            calculateInSampleSize(info.size.width, info.size.height, 512)
+                        )
+                    }
+                }
+                else -> ArtworkDecoder.decode(this, uri, 512)
             }
             
             // Cache the loaded bitmap
@@ -1007,7 +1033,7 @@ class MediaPlaybackService : Service(), AudioManager.OnAudioFocusChangeListener 
                 }
                 
                 if (art != null) {
-                    val bitmap = BitmapFactory.decodeByteArray(art, 0, art.size)
+                    val bitmap = ArtworkDecoder.decode(art, 512)
                     if (bitmap != null) {
                         bitmapCache.put(audio.id, bitmap)
                         android.util.Log.d("BeatBox", "Successfully loaded embedded album art for ${audio.title} in ${System.currentTimeMillis() - startTime}ms")
@@ -1047,6 +1073,11 @@ class MediaPlaybackService : Service(), AudioManager.OnAudioFocusChangeListener 
     }
 
     private fun actionIntent(action: String) = PendingIntent.getService(this, action.hashCode(), Intent(this, MediaPlaybackService::class.java).apply { this.action = action }, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        trimImageCaches(level)
+    }
 
     override fun onDestroy() {
         super.onDestroy()
