@@ -3,6 +3,7 @@ package com.blackstack.beatbox
 import android.net.Uri
 import androidx.compose.ui.graphics.Color
 import java.util.UUID
+import com.blackstack.beatbox.i18n.extraTranslations
 
 enum class AppLanguage(val label: String, val code: String) {
     TR("Türkçe", "tr"),
@@ -17,22 +18,6 @@ enum class AppLanguage(val label: String, val code: String) {
     ZH("中文", "zh"),
     AR("العربية", "ar"),
     KO("한국어", "ko")
-}
-
-enum class AppTheme(
-    val label: String, 
-    val labelTR: String, 
-    val isDark: Boolean, 
-    val previewColor: Color,
-    val isGradient: Boolean = true,
-    val gradientColors: List<Color> = emptyList()
-) {
-    // Modern, Sweet & Vibrant Themes
-    DYNAMIC("Dynamic Art", "Dinamik Albüm", true, Color(0xFF00E5FF), true, listOf(Color(0xFF0C0D15), Color(0xFF16192B), Color(0xFF0C0D15))),
-    AMOLED("OLED Black", "Zifiri Siyah", true, Color(0xFF00E5FF), true, listOf(Color(0xFF000000), Color(0xFF09090D), Color(0xFF000000))),
-    DARK("Midnight", "Gece Yarısı", true, Color(0xFF9C27B0), true, listOf(Color(0xFF0C0A1A), Color(0xFF1B1433), Color(0xFF0A0714))),
-    NEON_CYBER("Cyberpunk", "Siberpunk", true, Color(0xFF00F5D4), true, listOf(Color(0xFF180030), Color(0xFF2D0052), Color(0xFF00222B))),
-    ROSE_GOLD("Rose Gold", "Roz Altın", true, Color(0xFFF2CC8F), true, listOf(Color(0xFF21171C), Color(0xFF382730), Color(0xFF171013)))
 }
 
 enum class AuthProvider(val label: String) {
@@ -1194,20 +1179,12 @@ class Strings(val lang: AppLanguage) {
             "pt" to "Volume maximizado e riqueza sonora", "ru" to "Максимальная громкость и насыщенность",
             "ja" to "最大化された音量と豊かな響き", "zh" to "最大音量与饱满丰沛音质",
             "ar" to "أقصى مستوى صوت وامتلاء غني", "ko" to "최대화된 음량과 풍부한 공간감"
-        )
-    )
+        ),
+    ) + extraTranslations
 
     fun get(key: String): String {
         val keyMap = translations[key] ?: return key
         return keyMap[lang.code] ?: keyMap["en"] ?: keyMap["tr"] ?: key
-    }
-
-    fun getThemeLabel(theme: AppTheme): String = when (theme) {
-        AppTheme.DYNAMIC -> get("theme_dynamic")
-        AppTheme.AMOLED -> get("theme_amoled")
-        AppTheme.DARK -> get("theme_dark")
-        AppTheme.NEON_CYBER -> get("theme_cyberpunk")
-        AppTheme.ROSE_GOLD -> get("theme_rose_gold")
     }
 
     fun getEQPresetLabel(preset: EQPreset): String = when (preset) {
@@ -1225,91 +1202,4 @@ class Strings(val lang: AppLanguage) {
         EQPreset.TREBLE -> get("eq_desc_treble")
         EQPreset.LOUDNESS -> get("eq_desc_loudness")
     }
-}
-
-object MusicQuotes {
-    val quotes = listOf(
-        "Müzik ruhun gıdasıdır. ✨",
-        "Sözlerin bittiği yerde müzik başlar. 🎶",
-        "Hayat müziksiz bir hata olurdu. 🎧",
-        "Müzik, evrenin ortak dilidir. 🌍",
-        "Ritim, kalbin en sadık dostudur. 💓",
-        "Her şarkının anlatacak bir hikayesi vardır. 📖",
-        "Müzik, görünmeyen ruhun sesidir. 🌌",
-        "Kulaklıkla dünyayı sessize al, müziğin sesini aç. 🚀",
-        "Melodiler geçmişe atılan en hızlı köprüdür. 🌉",
-        "Müzik, kalbe dokunmanın en güzel yoludur. 🎹",
-        "Şarkılar, kelimelerin söyleyemediklerini fısıldar. 🌙",
-        "Müziksiz bir gün, kayıp bir gündür. ⏳",
-        "Notalar, duyguların en saf halidir. 🎼",
-        "Bir şarkı çalınır ve tüm anılar canlanır. 🌟",
-        "Müzik, ruhun özgürlük ilan ettiği andır. 🦅",
-        "Kulaklığı tak ve hayatın ritmine ayak uydur. 🎸",
-        "Sessizliği en güzel süsleyen şey melodidir. 🎻",
-        "Müzik, en karanlık gecelerde yanan ışıktır. 🔦",
-        "Şarkı söylemek, ruhun nefes almasıdır. 🌬️",
-        "Her ritim, yaşamın gizli bir nabzıdır. ⚡",
-        "Müzik, yaraları saran görünmez bir eldir. 🤲",
-        "Hayatın en güzel anlarının arka planında hep bir şarkı vardır. 🌅",
-        "Notaların büyücülüğüne teslim ol. ✨",
-        "Müzik, kalbin attığı en doğru tempodur. 🥁",
-        "Zamanı durdurmanın tek yolu iyi bir şarkıdır. ⏳",
-        "Müzik, ruhun derinliklerine yapılan bir yolculuktur. 🚀",
-        "Şarkılar insanın içindeki aynadır. 🪞",
-        "Müzik varsa, asla yalnız değilsin. 🤝",
-        "Ruhunu besleyen melodiye kulak ver. 🌿",
-        "Müzik, kelimelerin yetersiz kaldığı yerde konuşur. 💫",
-        "Her akor, yeni bir duygunun başlangıcıdır. 🎸",
-        "Hayatın ritmini kaçırma, müziği aç. 📻",
-        "Müzik, zihni dinlendiren en güzel sığınaktır. 🏰",
-        "Şarkılar kalbin en gizli odalarını havalandırır. 🪟",
-        "Müzik, evrenin ritmiyle kalbin ritminin buluştuğu yerdir. 💞",
-        "En iyi terapist, kulaklığındaki en sevdiğin şarkıdır. 🛋️",
-        "Müzik, ölümsüzlüğü hissetmenin en kolay yoludur. 🕊️",
-        "Şarkılar, hayatın soundtrack'idir. 🎬",
-        "Müzik, ruhun dans ettiği dildir. 💃",
-        "Kulaklığı tak, dış dünyayı kapat. 🔕",
-        "Melodiler içimizdeki çocukla konuşur. 🧸",
-        "Müzik, nehrin akışına kapılmak gibidir. 🌊",
-        "Her şarkı yeni bir evrene açılan kapıdır. 🚪",
-        "Müzik, kalbin en saf yankısıdır. 🔔",
-        "Hayat bir şarkıyla başlar, kalple devam eder. 💖",
-        "Müzik, hüzne neşe katan sihirli bir iksirdir. 🧪",
-        "Kulaklığındaki ses, gününün rengini belirler. 🎨",
-        "Müzik, en sadık yol arkadaşıdır. 🛤️",
-        "Notalar konuşmaya başladığında susup dinlemelisin. 🤫",
-        "Müzik, ruhun evrenle kurduğu gizli bağdır. 🌌",
-        "Şarkılar kalbin en derin yaralarını sarar. 🩹",
-        "Müzik, zihnin en güzel kaçış noktasıdır. 🏝️",
-        "Ritim varsa, umut hep vardır. 🌱",
-        "Müzik, kelimelere ihtiyaç duymayan şiirdir. 📜",
-        "Her melodi, ruhun çizdiği bir tablodur. 🖼️",
-        "Müzik, hayatın en tatlı melodramıdır. 🎭",
-        "Kulaklığını tak ve kendi konserini ver. 🎤",
-        "Müzik, zamanın ve mekanın ötesine geçmektir. ⏳",
-        "Şarkılar, ruhun parmak izleridir. 🔍",
-        "Müzik, kalbin en dürüst itirafıdır. 💌",
-        "Hayat bir şarkıdır, sen de en güzel notası ol. 🌟",
-        "Müzik, içimizdeki fırtınayı dindiren rüzgardır. 🍃",
-        "Notaların rehberliğinde kaybolmaya hazır mısın? 🧭",
-        "Müzik, evrenin kalbinin attığı yerdir. 💓",
-        "Şarkılar, en iyi anı saklama kutusudur. 📦",
-        "Müzik, ruhun uçsuz bucaksız denizidir. ⛵",
-        "Kulaklığını tak ve içindeki müziği serbest bırak. 🦋",
-        "Müzik, gözler kapalıyken dünyayı görmektir. 👁️‍🗨️",
-        "Her şarkı yeni bir macera, yeni bir duygu. 🗺️",
-        "Müzik, en güçlü anı toplayıcısıdır. 🌺",
-        "Şarkılar, kalbin ritmiyle eşzamanlı atan melodi kasetidir. 📼",
-        "Müzik, ruhun en özel lisanıdır. 🌐",
-        "Hayat kısa, müziği son ses aç. 🔊",
-        "Müzik, karanlıkta yol gösteren kuzey yıldızıdır. ⭐",
-        "Şarkılar insanın en yakın sırdaşıdır. 🤫",
-        "Müzik, evrenin en güzel uyumudur. 🎶",
-        "Kulaklığını tak ve sadece müziği hisset. 🧘",
-        "Müzik, ruhun yaşlanmasını engelleyen iksirdir. 💧",
-        "Her melodi, geleceğe bırakılan en güzel mirastır. 🎁",
-        "Müzik, kalbin en güzel şarkısını söylemesidir. 🎤"
-    )
-
-    fun getRandomQuote(): String = quotes.random()
 }

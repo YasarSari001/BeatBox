@@ -13,6 +13,7 @@ import androidx.credentials.exceptions.NoCredentialException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import com.blackstack.beatbox.Strings
 
 /** Google ile giriş denemesinin sonucu. */
 sealed interface GoogleSignInResult {
@@ -28,7 +29,10 @@ sealed interface GoogleSignInResult {
  * tanımlıysa kullanılabilir; aksi halde [isAvailable] false döner ve UI bu
  * seçeneği göstermez.
  */
-class GoogleSignInClient(private val context: Context) {
+class GoogleSignInClient(
+    private val context: Context,
+    private val strings: Strings
+) {
 
     private val credentialManager by lazy { CredentialManager.create(context) }
 
@@ -38,7 +42,7 @@ class GoogleSignInClient(private val context: Context) {
     suspend fun signIn(): GoogleSignInResult {
         val webClientId = context.googleWebClientId()
             ?: return GoogleSignInResult.Failure(
-                "Google girişi için web istemci kimliği bulunamadı."
+                strings.get("google_web_client_missing")
             )
 
         val request = GetCredentialRequest.Builder()
@@ -61,19 +65,19 @@ class GoogleSignInClient(private val context: Context) {
                 val googleCredential = GoogleIdTokenCredential.createFrom(credential.data)
                 GoogleSignInResult.Success(googleCredential.idToken)
             } else {
-                GoogleSignInResult.Failure("Google kimlik bilgisi alınamadı.")
+                GoogleSignInResult.Failure(strings.get("google_credential_missing"))
             }
         } catch (_: GetCredentialCancellationException) {
             GoogleSignInResult.Cancelled
         } catch (_: NoCredentialException) {
             GoogleSignInResult.Failure(
-                "Cihazda kullanılabilir Google hesabı bulunamadı. Lütfen Google hesabı ekleyin."
+                strings.get("google_no_account")
             )
         } catch (e: GoogleIdTokenParsingException) {
-            GoogleSignInResult.Failure("Google kimlik belirteci okunamadı.")
+            GoogleSignInResult.Failure(strings.get("google_token_unreadable"))
         } catch (e: GetCredentialException) {
             GoogleSignInResult.Failure(
-                e.localizedMessage ?: "Google girişi başarısız. Lütfen tekrar deneyin."
+                e.localizedMessage ?: strings.get("google_sign_in_failed")
             )
         }
     }

@@ -1,6 +1,8 @@
 package com.blackstack.beatbox.auth
 
+import com.blackstack.beatbox.AppLanguage
 import com.blackstack.beatbox.AuthProvider
+import com.blackstack.beatbox.Strings
 import com.blackstack.beatbox.UserProfile
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
@@ -18,6 +20,8 @@ import kotlinx.coroutines.test.runTest
 @OptIn(ExperimentalCoroutinesApi::class)
 class AuthControllerTest : StringSpec({
 
+    val strings = Strings(AppLanguage.TR)
+
     val profile = UserProfile(
         id = "uid-1",
         displayName = "Deniz",
@@ -29,7 +33,7 @@ class AuthControllerTest : StringSpec({
     "başarılı giriş kullanıcıyı iletir ve yüklemeyi bitirir" {
         runTest {
             val repository = FakeAuthRepository(AuthResult.Success(profile))
-            val controller = AuthController(repository, this)
+            val controller = AuthController(repository, this, strings)
             var received: UserProfile? = null
 
             controller.signInWithEmail("  deniz@example.com  ", "123456") { received = it }
@@ -45,7 +49,7 @@ class AuthControllerTest : StringSpec({
     "başarısız giriş hata mesajını gösterir" {
         runTest {
             val repository = FakeAuthRepository(AuthResult.Failure("E-posta veya şifre hatalı."))
-            val controller = AuthController(repository, this)
+            val controller = AuthController(repository, this, strings)
             var received: UserProfile? = null
 
             controller.signInWithEmail("deniz@example.com", "yanlis") { received = it }
@@ -60,7 +64,7 @@ class AuthControllerTest : StringSpec({
     "istek sürerken ikinci giriş denemesi yok sayılır" {
         runTest {
             val repository = GatedAuthRepository()
-            val controller = AuthController(repository, this)
+            val controller = AuthController(repository, this, strings)
             var successCount = 0
 
             controller.signInWithEmail("a@b.com", "123456") { successCount++ }
@@ -82,7 +86,7 @@ class AuthControllerTest : StringSpec({
     "kayıt sırasında ad ve e-posta kırpılır" {
         runTest {
             val repository = FakeAuthRepository(AuthResult.Success(profile))
-            val controller = AuthController(repository, this)
+            val controller = AuthController(repository, this, strings)
 
             controller.registerWithEmail("  Deniz  ", " deniz@example.com ", "123456") {}
             advanceUntilIdle()
@@ -97,7 +101,7 @@ class AuthControllerTest : StringSpec({
             val repository = FakeAuthRepository(
                 AuthResult.Message("Şifre sıfırlama bağlantısı gönderildi.")
             )
-            val controller = AuthController(repository, this)
+            val controller = AuthController(repository, this, strings)
 
             controller.sendPasswordReset(" deniz@example.com ")
             advanceUntilIdle()
@@ -111,7 +115,7 @@ class AuthControllerTest : StringSpec({
 
     "repository istisnası hata mesajına dönüşür" {
         runTest {
-            val controller = AuthController(ThrowingAuthRepository(), this)
+            val controller = AuthController(ThrowingAuthRepository(), this, strings)
 
             controller.signInWithEmail("a@b.com", "123456") {}
             advanceUntilIdle()

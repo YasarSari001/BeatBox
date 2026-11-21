@@ -52,6 +52,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.blackstack.beatbox.ui.components.EmptyArtKind
 import com.blackstack.beatbox.ui.components.EmptyStateArt
+import com.blackstack.beatbox.ui.components.buttonShadow
+import com.blackstack.beatbox.ui.components.cardShadow
 
 /** Ekolayzer ön ayar seçimi. */
 @Composable
@@ -314,8 +316,8 @@ fun SleepTimerDialog(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("5 min", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(0.5f))
-                        Text("120 min", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(0.5f))
+                        Text(strings.get("sleep_5_min"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(0.5f))
+                        Text(strings.get("sleep_120_min"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(0.5f))
                     }
                 }
             }

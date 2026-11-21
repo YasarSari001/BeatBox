@@ -3,6 +3,9 @@ package com.blackstack.beatbox
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.nulls.shouldNotBeNull
+import com.blackstack.beatbox.lyrics.CachedLyrics
+import com.blackstack.beatbox.lyrics.LRCParser
+import com.blackstack.beatbox.lyrics.LyricsProvider
 
 /**
  * Unit tests for LyricsProvider

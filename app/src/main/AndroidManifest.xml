@@ -7,10 +7,12 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Uygulama içi güncelleme: indirilen APK'yı yükleyiciye açmak için. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!--
-        RECORD_AUDIO is only needed for the microphone visualiser and is
-        requested on demand when the user enables it. It is not required to
-        play local music, so it must not be bundled into the startup request.
+        RECORD_AUDIO is used by the microphone visualiser. It is requested at
+        startup so the bars can react immediately; denying it only disables the
+        microphone-driven visualiser, playback keeps working.
     -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
@@ -19,6 +21,12 @@
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
+    <!--
+        Opsiyonel "Tüm dosyalara erişim": MediaStore dışındaki .lrc dosyalarını
+        okumak ve ID3 etiketlerini doğrudan yazmak için. Kullanıcı vermezse
+        uygulama scoped storage sınırları içinde çalışmaya devam eder.
+    -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
     <!--
         Android 9 ve öncesinde ID3 etiketlerini doğrudan dosyaya yazmak için
         gerekir. Android 10+ scoped storage nedeniyle istenmez.
@@ -49,7 +57,7 @@
         </activity>
 
         <service
-            android:name=".MediaPlaybackService"
+            android:name=".playback.MediaPlaybackService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
 

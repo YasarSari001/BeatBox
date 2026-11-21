@@ -44,6 +44,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.edit
+import com.blackstack.beatbox.ui.components.AlbumArtImage
+import com.blackstack.beatbox.ui.components.buttonShadow
 
 /** Yıl sonu dinleme özeti. */
 @Composable
@@ -57,26 +59,37 @@ fun WrappedDialog(
     val totalMinutes = prefs.getLong("stats_total_minutes", 0L)
     val topSongs = allAudioList.sortedByDescending { prefs.getInt("stats_count_${it.id}", 0) }.take(5)
     val topSong = topSongs.firstOrNull()
-    val topArtist = topSongs.groupBy { it.artist }.maxByOrNull { it.value.size }?.key ?: (topSong?.artist ?: "Bilinmiyor")
+    val topArtist = topSongs.groupBy { it.artist }.maxByOrNull { it.value.size }?.key
+        ?: (topSong?.artist ?: strings.get("unknown_artist"))
 
     AlertDialog(
         onDismissRequest = { onDismiss() },
         confirmButton = {
             Button(
                 onClick = {
-                    val shareText = "ğŸ”¥ My BeatBox Wrapped ğŸµ\n\nâ±ï¸ Total Listening: $totalMinutes minutes\nğŸ† Top Song: \"${topSong?.title ?: "N/A"}\" by ${topSong?.artist ?: "N/A"}\nğŸ¤ Top Artist: $topArtist\n\nListen on BeatBox!"
+                    val shareText = buildString {
+                        append(strings.get("wrapped_title")).append("\n\n")
+                        append("⏱️ ").append(strings.get("total_listen")).append(": ")
+                        append(totalMinutes).append(' ').append(strings.get("minutes")).append('\n')
+                        append("🏆 ").append(strings.get("most_played_song")).append(": ")
+                        append('"').append(topSong?.title ?: "N/A").append("\" - ")
+                        append(topSong?.artist ?: "N/A").append('\n')
+                        append("🎤 ").append(strings.get("artist")).append(": ")
+                        append(topArtist).append("\n\n")
+                        append(strings.get("app_name"))
+                    }
                     val intent = Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
-                        putExtra(Intent.EXTRA_SUBJECT, "BeatBox Wrapped")
+                        putExtra(Intent.EXTRA_SUBJECT, strings.get("wrapped_title"))
                         putExtra(Intent.EXTRA_TEXT, shareText)
                     }
-                    ctx.startActivity(Intent.createChooser(intent, "Müzik Özetini Paylaş"))
+                    ctx.startActivity(Intent.createChooser(intent, strings.get("share_summary")))
                 },
                 modifier = Modifier.buttonShadow()
             ) {
                 Icon(Icons.Rounded.Share, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Özeti Paylaş", fontWeight = FontWeight.Bold)
+                Text(strings.get("share_summary"), fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
@@ -93,7 +106,7 @@ fun WrappedDialog(
                     Icon(Icons.Rounded.Analytics, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
                 }
                 Spacer(Modifier.width(12.dp))
-                Text("BeatBox Wrapped ğŸµ", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                Text(strings.get("wrapped_title"), fontWeight = FontWeight.Bold, fontSize = 20.sp)
             }
         },
         text = {
@@ -161,7 +174,7 @@ fun HistoryDialog(
                     prefs.edit { remove("stats_history") }
                     onDismiss()
                 }) {
-                    Text("Geçmişi Temizle", color = Color.Red)
+                    Text(strings.get("clear_history"), color = Color.Red)
                 }
             }
         },
@@ -174,13 +187,13 @@ fun HistoryDialog(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.History, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
                 Spacer(Modifier.width(12.dp))
-                Text("Dinleme Geçmişi", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text(strings.get("listening_history"), fontWeight = FontWeight.Bold, fontSize = 18.sp)
             }
         },
         text = {
             if (historySongs.isEmpty()) {
                 Box(Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) {
-                    Text("Henüz dinleme geçmişi yok", color = Color.Gray)
+                    Text(strings.get("no_history"), color = Color.Gray)
                 }
             } else {
                 LazyColumn(modifier = Modifier.heightIn(max = 350.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

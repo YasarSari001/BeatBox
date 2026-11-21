@@ -4,6 +4,8 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import java.io.EOFException
 import java.io.IOException
+import com.blackstack.beatbox.playback.causeChain
+import com.blackstack.beatbox.playback.playbackErrorMessages
 
 /**
  * Unit tests for the playback error helpers.

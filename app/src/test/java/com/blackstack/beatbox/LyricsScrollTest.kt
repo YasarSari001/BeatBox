@@ -2,6 +2,8 @@ package com.blackstack.beatbox
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import com.blackstack.beatbox.ui.lyrics.lyricsItemScrollOffset
+import com.blackstack.beatbox.ui.lyrics.lyricsScrollDelta
 
 /**
  * Şarkı sözü listesinin çapa noktasına tek geçişte kaydırılmasını doğrular.

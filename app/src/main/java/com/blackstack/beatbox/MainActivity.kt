@@ -14,11 +14,13 @@ import android.os.Bundle
 import android.os.IBinder
 import android.os.StrictMode
 import android.provider.MediaStore
+import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -28,15 +30,29 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.palette.graphics.Palette
 import com.blackstack.beatbox.ui.theme.BeatBoxTheme
+import com.blackstack.beatbox.ui.theme.PlayerArtworkColors
+import com.blackstack.beatbox.ui.theme.PlayerColorExtractor
+import com.blackstack.beatbox.ui.theme.ThemePreferences
 import android.graphics.Bitmap
 import android.util.Log
 import kotlinx.coroutines.*
 import kotlin.math.sqrt
 import kotlin.math.abs
+import com.blackstack.beatbox.ui.components.AlbumArtCache
+import com.blackstack.beatbox.ui.BeatBoxApp
+import com.blackstack.beatbox.playback.MediaPlaybackService
+import com.blackstack.beatbox.playback.OnlineAudioManager
+import com.blackstack.beatbox.i18n.appLanguageOf
+import com.blackstack.beatbox.playback.trimImageCaches
+import com.blackstack.beatbox.ui.components.UpdateDialog
+import com.blackstack.beatbox.updates.UpdateChecker
+import com.blackstack.beatbox.updates.UpdateInfo
+import com.blackstack.beatbox.updates.UpdateInstaller
 
 class MainActivity : ComponentActivity(), SensorEventListener {
     var musicService: MediaPlaybackService? = null
@@ -44,6 +60,8 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     // Thread-safe state management
     var currentAudio = mutableStateOf<AudioFile?>(null)
     var isPlaying = mutableStateOf(false)
+    /** GitHub'daki update.json yeni sürüm bildirdiğinde dolar. */
+    var pendingUpdate by mutableStateOf<UpdateInfo?>(null)
 
     // Constants for shake detection
     private companion object {
@@ -53,6 +71,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         private const val FADE_STEP = 0.05f
         private const val FADE_DELAY_MS = 1500L
         private const val DELETE_REQUEST_CODE = 1001
+        private const val UPDATE_CHECK_INTERVAL_MS = 24L * 60 * 60 * 1000
     }
     
     var onSongComplete: (() -> Unit)? = null
@@ -60,6 +79,14 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     var uiActionPlayPrev: (() -> Unit)? = null
     var uiActionPlayPause: (() -> Unit)? = null
     lateinit var prefs: SharedPreferences
+    private val recordAudioLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) {
+            android.util.Log.d("MainActivity", "RECORD_AUDIO izni verildi, Visualizer kuruluyor...")
+            musicService?.setupEQ()
+        } else {
+            android.util.Log.w("MainActivity", "RECORD_AUDIO izni reddedildi, Visualizer calismayacak.")
+        }
+    }
     var sleepTimerMinutes by mutableIntStateOf(0)
     var sleepTimerSeconds by mutableIntStateOf(0)
     @Volatile var isSleepTimerRunning = false
@@ -83,6 +110,15 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             musicService?.onPrevRequested = { uiActionPlayPrev?.invoke() }
             musicService?.onPlaybackStateChanged = { isPlaying.value = it }
             musicService?.onAudioChanged = { currentAudio.value = it }
+
+            // RECORD_AUDIO izni - Visualizer icin gereklidir
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    musicService?.setupEQ()
+                } else {
+                    recordAudioLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+                }
+            }
         }
         override fun onServiceDisconnected(name: ComponentName?) { serviceBound = false; isPlaying.value = false }
     }
@@ -180,6 +216,9 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         Intent(this, MediaPlaybackService::class.java).also { intent ->
             bindService(intent, serviceConnection, BIND_AUTO_CREATE)
         }
+
+        // RECORD_AUDIO izni kaydini onServiceConnected icinde yapiliyor
+
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let { sensor ->
             sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL)
@@ -189,6 +228,33 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         startSleepTimer()
         
         setContent { BeatBoxRoot() }
+
+        checkForUpdatesOnStart()
+    }
+
+    /**
+     * Açılışta GitHub'daki update.json okunur; 24 saatte bir denetlenir ve
+     * kullanıcı "Sonra" dediyse o sürüm atlanır.
+     */
+    private fun checkForUpdatesOnStart() {
+        val now = System.currentTimeMillis()
+        val lastCheck = prefs.getLong("update_last_check", 0L)
+        if (now - lastCheck < UPDATE_CHECK_INTERVAL_MS) return
+
+        lifecycleScope.launch {
+            val info = UpdateChecker.fetch()
+            prefs.edit { putLong("update_last_check", System.currentTimeMillis()) }
+            if (info != null && UpdateChecker.isNewer(info) &&
+                info.versionCode != prefs.getInt("update_skipped_version", 0)
+            ) {
+                pendingUpdate = info
+            }
+        }
+    }
+
+    private fun skipUpdate(info: UpdateInfo) {
+        pendingUpdate = null
+        prefs.edit { putInt("update_skipped_version", info.versionCode) }
     }
 
     fun setKeepScreenOn(enabled: Boolean) {
@@ -299,15 +365,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             }
         }
 
-        var currentTheme by remember { 
-            mutableStateOf(
-                try {
-                    AppTheme.valueOf(prefs.getString("app_theme", "DYNAMIC") ?: "DYNAMIC")
-                } catch (e: Exception) {
-                    AppTheme.DYNAMIC
-                }
-            )
-        }
+        var themeConfig by remember { mutableStateOf(ThemePreferences.load(prefs)) }
         
         // Detect system language and set as default
         val configuration = androidx.compose.ui.platform.LocalConfiguration.current
@@ -349,41 +407,71 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         }
         val s = remember(lang) { Strings(lang) }
         val view = LocalView.current
+        val systemDarkTheme = androidx.compose.foundation.isSystemInDarkTheme()
+        val darkTheme = themeConfig.isDark(systemDarkTheme)
         if (!view.isInEditMode) {
             SideEffect {
                 val window = (view.context as android.app.Activity).window
-                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !currentTheme.isDark
-                WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = !currentTheme.isDark
+                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+                WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = !darkTheme
             }
         }
         val currAudio by currentAudio
-        var dynamicPrimary by remember { mutableStateOf(Color(0xFF00E5FF)) }
+        var artworkColors by remember { mutableStateOf<PlayerArtworkColors?>(null) }
 
         LaunchedEffect(currAudio?.id) {
             val audio = currAudio
-            if (audio != null) {
-                withContext(Dispatchers.IO) {
-                    try {
-                        AlbumArtCache.bitmapCache.get(audio.id)?.let { bmp ->
-                            val palette = androidx.palette.graphics.Palette.from(bmp).generate()
-                            val dom = palette.getDominantColor("#00E5FF".toColorInt())
-                            withContext(Dispatchers.Main) {
-                                dynamicPrimary = Color(dom)
-                            }
+            if (audio == null) {
+                artworkColors = null
+                return@LaunchedEffect
+            }
+            withContext(Dispatchers.IO) {
+                try {
+                    AlbumArtCache.bitmapCache.get(audio.id)?.let { bmp ->
+                        val palette = Palette.from(bmp).generate()
+                        val dom = palette.getDominantColor("#00E5FF".toColorInt())
+                        val colors = PlayerColorExtractor.extractColors(
+                            bitmap = bmp,
+                            fallbackColor = Color(dom),
+                            dominantOverride = Color(dom)
+                        )
+                        withContext(Dispatchers.Main) {
+                            artworkColors = colors
                         }
-                    } catch (_: Exception) {}
-                }
+                    }
+                } catch (_: Exception) {}
             }
         }
 
+        val layoutDirection = if (lang == AppLanguage.AR) View.LAYOUT_DIRECTION_RTL else View.LAYOUT_DIRECTION_LTR
+        window.decorView.layoutDirection = layoutDirection
+
         BeatBoxTheme(
-            theme = currentTheme,
-            dynamicPrimary = if (currentTheme == AppTheme.DYNAMIC) dynamicPrimary else null
+            config = themeConfig,
+            artworkSeedColor = if (themeConfig.materialYou && themeConfig.dynamicTheme) {
+                artworkColors?.dominant
+            } else {
+                null
+            }
         ) {
             Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                BeatBoxApp(this@MainActivity, currentTheme, s, lang, visualizerLevel, visualizerWaveform,
-                    { currentTheme = it; prefs.edit { putString("app_theme", it.name) } },
+                BeatBoxApp(this@MainActivity, themeConfig, s, lang, visualizerLevel, visualizerWaveform,
+                    { themeConfig = it; ThemePreferences.save(prefs, it) },
                     { lang = it; prefs.edit { putString("app_lang", it.name) } })
+
+                val update = pendingUpdate
+                if (update != null) {
+                    UpdateDialog(
+                        info = update,
+                        currentVersionName = BuildConfig.VERSION_NAME,
+                        strings = s,
+                        onDownload = {
+                            pendingUpdate = null
+                            UpdateInstaller.downloadAndInstall(this@MainActivity, update)
+                        },
+                        onDismiss = { skipUpdate(update) },
+                    )
+                }
             }
         }
     }
@@ -394,6 +482,8 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         android.util.Log.d("MainActivity", "serviceBound: $serviceBound")
         musicService?.play(audio, prefs.getBoolean("crossfade_enabled", true)) 
     }
+
+    /** İki yerel şarkıyı eş-zamanlı karıştırır. Başarısızsa "Yapılamaz" nedeni döner. */
     fun pauseAudio(audio: AudioFile?) { musicService?.pause() }
     fun resumeAudio(audio: AudioFile?) { musicService?.resume() }
     fun seekTo(position: Int) { musicService?.seekTo(position) }
@@ -527,12 +617,13 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         super.onActivityResult(requestCode, resultCode, data)
         
         if (requestCode == DELETE_REQUEST_CODE) {
+            val strings = Strings(appLanguageOf(this))
             if (resultCode == RESULT_OK) {
                 // File was successfully deleted by user
                 lifecycleScope.launch(Dispatchers.Main) {
                     Toast.makeText(
                         this@MainActivity,
-                        "Şarkı silindi",
+                        strings.get("song_deleted"),
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -541,7 +632,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 lifecycleScope.launch(Dispatchers.Main) {
                     Toast.makeText(
                         this@MainActivity,
-                        "Silme işlemi iptal edildi",
+                        strings.get("deletion_cancelled"),
                         Toast.LENGTH_SHORT
                     ).show()
                 }

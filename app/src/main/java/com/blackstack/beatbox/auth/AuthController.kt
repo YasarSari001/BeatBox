@@ -4,6 +4,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.blackstack.beatbox.Strings
 import com.blackstack.beatbox.UserProfile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -17,7 +18,8 @@ import kotlinx.coroutines.launch
 @Stable
 class AuthController(
     private val repository: AuthRepository,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    private val strings: Strings
 ) {
     var isLoading by mutableStateOf(false)
         private set
@@ -71,7 +73,7 @@ class AuthController(
             when (val result = repository.sendPasswordReset(email.trim())) {
                 is AuthResult.Message -> infoMessage = result.message
                 is AuthResult.Failure -> errorMessage = result.message
-                is AuthResult.Success -> infoMessage = "İşlem tamamlandı."
+                is AuthResult.Success -> infoMessage = strings.get("action_completed")
             }
             isLoading = false
         }
@@ -86,7 +88,7 @@ class AuthController(
         isLoading = true
         scope.launch {
             val result = runCatching { action() }.getOrElse {
-                AuthResult.Failure(it.localizedMessage ?: "Giriş yapılamadı. Lütfen tekrar deneyin.")
+                AuthResult.Failure(it.localizedMessage ?: strings.get("auth_generic_error"))
             }
             when (result) {
                 is AuthResult.Success -> {

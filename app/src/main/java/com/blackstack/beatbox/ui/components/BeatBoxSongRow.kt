@@ -54,11 +54,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.blackstack.beatbox.AlbumArtImage
-import com.blackstack.beatbox.AnimatedEqualizer
+import com.blackstack.beatbox.ui.components.AlbumArtImage
+import com.blackstack.beatbox.ui.components.AnimatedEqualizer
 import com.blackstack.beatbox.AudioFile
 import com.blackstack.beatbox.Strings
-import com.blackstack.beatbox.formatTime
+import com.blackstack.beatbox.ui.components.formatTime
 import com.blackstack.beatbox.ui.theme.BeatBoxMotion
 import com.blackstack.beatbox.ui.theme.LocalReducedMotion
 
@@ -303,7 +303,7 @@ fun BeatBoxSongRow(
                     )
                     if (audio.isExplicit) {
                         Spacer(Modifier.width(5.dp))
-                        com.blackstack.beatbox.ExplicitBadge()
+                        ExplicitBadge()
                     }
                 }
                 Spacer(Modifier.height(if (compact) 1.dp else 3.dp))

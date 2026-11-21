@@ -26,8 +26,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.blackstack.beatbox.AlbumArtImage
-import com.blackstack.beatbox.ArtistImage
+import com.blackstack.beatbox.ui.components.AlbumArtImage
+import com.blackstack.beatbox.metadata.ArtistImage
 import com.blackstack.beatbox.AudioFile
 
 /**

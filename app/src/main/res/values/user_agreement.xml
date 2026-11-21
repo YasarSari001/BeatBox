@@ -12,7 +12,7 @@
         <h4>2. Gizlilik ve Veri Kullanımı</h4>
         <p>• BeatBox, cihazınızdaki müzik dosyalarına erişim izni gerektirir.</p>
         <p>• Müzik dosyalarının kendisi, ses verisi ve oynatma geçmişi cihazınızda yerel olarak saklanır ve sunucularımıza gönderilmez.</p>
-        <p>• Şarkı sözü ve sanatçı görseli özelliklerini kullanmak için <b>şarkı adı, sanatçı adı ve albüm adı</b> bilgisi aşağıdaki üçüncü taraf servislerine gönderilir: LRCLIB, Musixmatch, NetEase Müzik, Genius, lyrics.ovh, BetterLyrics, iTunes Search API ve Deezer.</p>
+        <p>• Şarkı sözü ve sanatçı görseli özelliklerini kullanmak için <b>şarkı adı, sanatçı adı ve albüm adı</b> bilgisi aşağıdaki üçüncü taraf servislerine gönderilir: LRCLIB, lrc.red, Unison, KuGou, NetEase Müzik, lyrics.ovh, iTunes Search API ve Deezer.</p>
         <p>• Bu servisler kendi gizlilik politikalarına tabidir ve size kendi verilerini işleyebilir.</p>
         <p>• Ağ üzerinden yalnızca söz araması, kapak görseli araması ve güncelleme kontrolü yapılır. Müzik çalmak için internet bağlantısı gerekmez.</p>
         

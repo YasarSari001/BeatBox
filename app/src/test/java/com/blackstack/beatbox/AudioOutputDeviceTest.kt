@@ -3,6 +3,8 @@ package com.blackstack.beatbox
 import android.media.AudioDeviceInfo
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import com.blackstack.beatbox.ui.components.AudioOutputKind
+import com.blackstack.beatbox.ui.components.audioOutputKindFor
 
 /**
  * Unit tests for the audio output device classification.

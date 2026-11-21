@@ -9,6 +9,9 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import com.blackstack.beatbox.ui.components.MiniPlayerBar
+import com.blackstack.beatbox.Strings
+import com.blackstack.beatbox.AppLanguage
 
 /**
  * Preservation Property Tests for Mini Player Bar
@@ -55,12 +58,15 @@ class MiniPlayerPreservationTest {
         
         composeTestRule.setContent {
             MiniPlayerBar(
-                a = mockAudio,
+                strings = Strings(AppLanguage.EN),
+                audio = mockAudio,
+                progress = { 0f },
                 isPlaying = true,
                 onClick = {},
                 onPlayPause = { playPauseClicked = true },
                 onNext = {},
-                onPrev = {}
+                onPrev = {},
+                onSwipeUp = {}
             )
         }
 
@@ -87,12 +93,15 @@ class MiniPlayerPreservationTest {
         
         composeTestRule.setContent {
             MiniPlayerBar(
-                a = mockAudio,
+                strings = Strings(AppLanguage.EN),
+                audio = mockAudio,
+                progress = { 0f },
                 isPlaying = false,
                 onClick = {},
                 onPlayPause = { playPauseClicked = true },
                 onNext = {},
-                onPrev = {}
+                onPrev = {},
+                onSwipeUp = {}
             )
         }
 
@@ -128,12 +137,15 @@ class MiniPlayerPreservationTest {
         
         composeTestRule.setContent {
             MiniPlayerBar(
-                a = mockAudio,
+                strings = Strings(AppLanguage.EN),
+                audio = mockAudio,
+                progress = { 0f },
                 isPlaying = true,
                 onClick = {},
                 onPlayPause = {},
                 onNext = { nextClicked = true },
-                onPrev = {}
+                onPrev = {},
+                onSwipeUp = {}
             )
         }
 
@@ -173,12 +185,15 @@ class MiniPlayerPreservationTest {
         
         composeTestRule.setContent {
             MiniPlayerBar(
-                a = mockAudio,
+                strings = Strings(AppLanguage.EN),
+                audio = mockAudio,
+                progress = { 0f },
                 isPlaying = true,
                 onClick = {},
                 onPlayPause = {},
                 onNext = {},
-                onPrev = { prevClicked = true }
+                onPrev = { prevClicked = true },
+                onSwipeUp = {}
             )
         }
 
@@ -217,12 +232,15 @@ class MiniPlayerPreservationTest {
         
         composeTestRule.setContent {
             MiniPlayerBar(
-                a = mockAudio,
+                strings = Strings(AppLanguage.EN),
+                audio = mockAudio,
+                progress = { 0f },
                 isPlaying = true,
                 onClick = { barClicked = true },
                 onPlayPause = {},
                 onNext = {},
-                onPrev = {}
+                onPrev = {},
+                onSwipeUp = {}
             )
         }
 
@@ -256,12 +274,15 @@ class MiniPlayerPreservationTest {
         
         composeTestRule.setContent {
             MiniPlayerBar(
-                a = mockAudio,
+                strings = Strings(AppLanguage.EN),
+                audio = mockAudio,
+                progress = { 0f },
                 isPlaying = true,
                 onClick = {},
                 onPlayPause = {},
                 onNext = {},
-                onPrev = {}
+                onPrev = {},
+                onSwipeUp = {}
             )
         }
 
@@ -300,12 +321,15 @@ class MiniPlayerPreservationTest {
         
         composeTestRule.setContent {
             MiniPlayerBar(
-                a = mockAudio,
+                strings = Strings(AppLanguage.EN),
+                audio = mockAudio,
+                progress = { 0f },
                 isPlaying = true,
                 onClick = {},
                 onPlayPause = {},
                 onNext = {},
-                onPrev = {}
+                onPrev = {},
+                onSwipeUp = {}
             )
         }
 
@@ -348,12 +372,15 @@ class MiniPlayerPreservationTest {
         
         composeTestRule.setContent {
             MiniPlayerBar(
-                a = mockAudio,
+                strings = Strings(AppLanguage.EN),
+                audio = mockAudio,
+                progress = { 0f },
                 isPlaying = false,
                 onClick = {},
                 onPlayPause = {},
                 onNext = {},
-                onPrev = {}
+                onPrev = {},
+                onSwipeUp = {}
             )
         }
 

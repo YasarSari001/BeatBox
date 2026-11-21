@@ -1,7 +1,13 @@
 package com.blackstack.beatbox.ui.home
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -42,6 +48,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -64,16 +71,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.blackstack.beatbox.AlbumArtImage
-import com.blackstack.beatbox.ArtistImage
+import com.blackstack.beatbox.ui.components.AlbumArtImage
+import com.blackstack.beatbox.metadata.ArtistImage
 import com.blackstack.beatbox.AudioFile
-import com.blackstack.beatbox.MusicVisualizer
+import com.blackstack.beatbox.ui.components.MusicVisualizer
 import com.blackstack.beatbox.Strings
 import com.blackstack.beatbox.ui.components.EmptyArtKind
 import com.blackstack.beatbox.ui.components.EmptyStateArt
 import com.blackstack.beatbox.ui.theme.BeatBoxMotion
 import com.blackstack.beatbox.ui.theme.LocalReducedMotion
 import java.util.Calendar
+import kotlinx.coroutines.delay
 
 // ---------------------------------------------------------------------------
 // Selamlama
@@ -255,15 +263,28 @@ internal fun HomeForYouSection(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             itemsIndexed(songs, key = { _, song -> song.id }) { index, song ->
-                HomeTopSongCard(
-                    song = song,
-                    rank = index + 1,
-                    isCurrent = song.id == currentAudioId,
-                    isPlaying = isPlaying,
-                    visualizerLevel = visualizerLevel,
-                    visualizerWaveform = visualizerWaveform,
-                    onClick = { onPlaySong(song) }
-                )
+                val visibleState = remember(song.id) { MutableTransitionState(false) }
+                LaunchedEffect(song.id) {
+                    delay((index.coerceAtMost(6) * BeatBoxMotion.Stagger).toLong())
+                    visibleState.targetState = true
+                }
+                AnimatedVisibility(
+                    visibleState = visibleState,
+                    enter = expandVertically(animationSpec = tween(340)) +
+                        fadeIn(animationSpec = tween(340)),
+                    exit = shrinkVertically(animationSpec = tween(220)) +
+                        fadeOut(animationSpec = tween(220))
+                ) {
+                    HomeTopSongCard(
+                        song = song,
+                        rank = index + 1,
+                        isCurrent = song.id == currentAudioId,
+                        isPlaying = isPlaying,
+                        visualizerLevel = visualizerLevel,
+                        visualizerWaveform = visualizerWaveform,
+                        onClick = { onPlaySong(song) }
+                    )
+                }
             }
         }
     }

@@ -2,6 +2,9 @@ package com.blackstack.beatbox
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import com.blackstack.beatbox.metadata.FilenameMetadata
+import com.blackstack.beatbox.metadata.needsMetadataUpdate
+import com.blackstack.beatbox.metadata.parseFilenameMetadata
 
 /**
  * Dosya adı çözümlemesinin ve gereksiz ID3 yazımını engelleyen karşılaştırmanın

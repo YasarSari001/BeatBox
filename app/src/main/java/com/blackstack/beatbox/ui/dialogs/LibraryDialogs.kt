@@ -39,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.blackstack.beatbox.ui.components.buttonShadow
 
 /** Müzik taranacak klasörleri seçme. */
 @Composable
@@ -110,7 +111,7 @@ fun FolderDialog(
                         fontSize = 20.sp
                     )
                     Text(
-                        "${selectedFolders.size} klasör seçili",
+                        strings.get("folders_selected").replace("%d", selectedFolders.size.toString()),
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.primary.copy(0.7f),
                         fontWeight = FontWeight.Medium
@@ -121,7 +122,7 @@ fun FolderDialog(
         text = {
             Column {
                 Text(
-                    "Müzik klasörlerini seç",
+                    strings.get("select_music_folders"),
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurface.copy(0.6f),
                     modifier = Modifier.padding(bottom = 12.dp)

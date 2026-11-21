@@ -30,6 +30,10 @@ import com.blackstack.beatbox.ui.dialogs.WrappedDialog
 import com.blackstack.beatbox.ui.player.FullScreenPlayer
 import com.blackstack.beatbox.ui.player.PlaylistDetailScreen
 import com.blackstack.beatbox.ui.settings.SettingsScreen
+import com.blackstack.beatbox.ui.theme.ThemeConfig
+import com.blackstack.beatbox.auth.AuthDialog
+import com.blackstack.beatbox.auth.ProfileDialog
+import com.blackstack.beatbox.playback.mergeSessionProfile
 
 /**
  * Scaffold'un üzerine açılan tüm ekran ve diyaloglar.
@@ -49,9 +53,9 @@ fun BeatBoxOverlays(
     playlists: List<Playlist>,
     selectedFolders: Set<String>,
     availableFolders: List<String>,
-    currentTheme: AppTheme,
+    themeConfig: ThemeConfig,
     currentLang: AppLanguage,
-    onThemeChange: (AppTheme) -> Unit,
+    onThemeConfigChange: (ThemeConfig) -> Unit,
     onLangChange: (AppLanguage) -> Unit,
     tempoViz: Boolean,
     onTempoVizChange: (Boolean) -> Unit,
@@ -84,7 +88,7 @@ fun BeatBoxOverlays(
     onDeleteSong: (AudioFile) -> Unit,
     onPlaySong: (AudioFile, List<AudioFile>) -> Unit,
     onPlayPlaylist: (List<AudioFile>) -> Unit,
-    onUpdateSongStats: (AudioFile) -> Unit
+    onUpdateSongStats: (AudioFile) -> Unit,
 ) {
         // Settings Screen
         AnimatedVisibility(overlays.showSettings, enter = slideInHorizontally { it } + fadeIn(), exit = slideOutHorizontally { it } + fadeOut()) {
@@ -92,9 +96,9 @@ fun BeatBoxOverlays(
                 strings = strings,
                 userProfile = userProfile,
                 avatarIcons = avatarIcons,
-                currentTheme = currentTheme,
+                themeConfig = themeConfig,
                 currentLang = currentLang,
-                onThemeChange = onThemeChange,
+                onThemeConfigChange = onThemeConfigChange,
                 onLangChange = onLangChange,
                 tempoViz = tempoViz,
                 onTempoVizChange = onTempoVizChange,
@@ -151,32 +155,30 @@ fun BeatBoxOverlays(
             exit = slideOutVertically(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) { it } + fadeOut(animationSpec = tween(200))
         ) {
             currentAudio?.let { a ->
-                DynamicThemePlayer(a, currentTheme) {
-                    FullScreenPlayer(
-                        player = player,
-                        a = a,
-                        isPlaying = isPlaying,
-                        isShuffle = isShuffle,
-                        repeatMode = repeatMode,
-                        animDir = animationDirection,
-                        strings = strings,
-                        isFav = favoriteIds.contains(a.id.toString()),
-                        onToggleFav = { onToggleFavorite(a) },
-                        onCollapse = { overlays.showPlayer = false },
-                        onPlayPause = onPlayPause,
-                        onNext = onNext,
-                        onPrev = onPrev,
-                        onShuffle = onShuffleToggle,
-                        onRepeat = onRepeatCycle,
-                        onAdd = { overlays.showAddToPlaylist = true },
-                        currentPlaylist = currentPlaylist,
-                        onSelectFromQueue = onSelectFromQueue,
-                        onOpenEQ = { overlays.showEQ = true },
-                        onOpenSleepTimer = { overlays.showSleepTimer = true },
-                        visualizerLevel = visualizerLevel,
-                        visualizerWaveform = visualizerWaveform
-                    )
-                }
+                FullScreenPlayer(
+                    player = player,
+                    a = a,
+                    isPlaying = isPlaying,
+                    isShuffle = isShuffle,
+                    repeatMode = repeatMode,
+                    animDir = animationDirection,
+                    strings = strings,
+                    isFav = favoriteIds.contains(a.id.toString()),
+                    onToggleFav = { onToggleFavorite(a) },
+                    onCollapse = { overlays.showPlayer = false },
+                    onPlayPause = onPlayPause,
+                    onNext = onNext,
+                    onPrev = onPrev,
+                    onShuffle = onShuffleToggle,
+                    onRepeat = onRepeatCycle,
+                    onAdd = { overlays.showAddToPlaylist = true },
+                    currentPlaylist = currentPlaylist,
+                    onSelectFromQueue = onSelectFromQueue,
+                    onOpenEQ = { overlays.showEQ = true },
+                    onOpenSleepTimer = { overlays.showSleepTimer = true },
+                    visualizerLevel = visualizerLevel,
+                    visualizerWaveform = visualizerWaveform
+                )
             }
         }
 
@@ -293,7 +295,7 @@ fun BeatBoxOverlays(
                     onUserProfileChange(merged)
                     saveUserProfile(prefs, merged)
                     overlays.showAuth = false
-                    Toast.makeText(ctx, "Hoş geldiniz, ${merged.displayName}!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "${strings.get("welcome_back")}, ${merged.displayName}!", Toast.LENGTH_SHORT).show()
                 }
             )
         }
@@ -301,20 +303,21 @@ fun BeatBoxOverlays(
         // User Profile Dialog
         if (overlays.showProfile) {
             ProfileDialog(
+                strings = strings,
                 user = userProfile,
                 avatarIcons = avatarIcons,
                 onDismiss = { overlays.showProfile = false },
                 onSaveProfile = { updatedUser ->
                     onUserProfileChange(updatedUser)
                     saveUserProfile(prefs, updatedUser)
-                    Toast.makeText(ctx, "Profil güncellendi", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, strings.get("profile_updated"), Toast.LENGTH_SHORT).show()
                 },
                 onLogout = {
                     signOutFirebase(ctx)
                     val loggedOut = UserProfile(isLoggedIn = false)
                     onUserProfileChange(loggedOut)
                     saveUserProfile(prefs, loggedOut)
-                    Toast.makeText(ctx, "Oturum kapatıldı", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, strings.get("logged_out"), Toast.LENGTH_SHORT).show()
                 }
             )
         }

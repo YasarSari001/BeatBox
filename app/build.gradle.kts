@@ -15,16 +15,6 @@ if (googleServicesFile.exists()) {
     apply(plugin = "com.google.gms.google-services")
 }
 
-/**
- * API anahtarları kaynak kontrolüne ve APK içinde plaintext olarak giremez.
- *
- * MUSIXMATCH_API_KEY şu an boş bırakılmıştır: Musixmatch sağlayıcısı devre dışı
- * kalır, ancak uygulama diğer ücretsiz sağlayıcılar (LRCLIB, lyrics.ovh, Genius,
- * NetEase, BetterLyrics) ile çalışmaya devam eder. Anahtar ihtiyaç duyulursa
- * runtime'da güvenli bir şekilde sağlanmalı (asla APK içinde plaintext).
- */
-val musixmatchApiKey: String = ""
-
 ksp {
     arg("room.generateKotlin", "true")
 }
@@ -37,14 +27,13 @@ android {
         applicationId = "com.blackstack.beatbox"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "3.0"
+        versionCode = 4
+        versionName = "3.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
-        buildConfigField("String", "MUSIXMATCH_API_KEY", "\"$musixmatchApiKey\"")
     }
 
     buildTypes {
@@ -81,6 +70,24 @@ android {
             it.useJUnitPlatform()
         }
     }
+
+    lint {
+        // Projede Fragment bağımlılığı yok; Activity Result API kullanımı
+        // bu kontrolü yanlış pozitif olarak tetikliyor.
+        disable += "InvalidFragmentVersionForActivityResult"
+        // Kotlin FIR tabanlı lint analizi bu iki kontrolde
+        // InvalidFirElementTypeException ile çöküyor (AGP/Kotlin araç hatası).
+        disable += "UnsafeOptInUsageError"
+        disable += "UnsafeOptInUsageWarning"
+        // Sürüm güncelleme önerileri hata değil, bilgi düzeyinde kalsın.
+        informational += listOf(
+            "GradleDependency",
+            "NewerVersionAvailable",
+            "AndroidGradlePluginVersion"
+        )
+        abortOnError = true
+        checkReleaseBuilds = false
+    }
 }
 
 kotlin {
@@ -113,6 +120,9 @@ dependencies {
 
     // Palette (for dynamic colors from album art)
     implementation(libs.androidx.palette)
+
+    // Material Color Utilities (Material You palette generation)
+    implementation(libs.material.color.utilities)
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)

@@ -12,6 +12,9 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import com.blackstack.beatbox.ui.components.MiniPlayerBar
+import com.blackstack.beatbox.Strings
+import com.blackstack.beatbox.AppLanguage
 
 /**
  * Bug Condition Exploration Test for Audio Output Device Selector
@@ -68,12 +71,15 @@ class AudioOutputIndicatorBugTest {
             // Render the MiniPlayerBar component
             composeTestRule.setContent {
                 MiniPlayerBar(
-                    a = mockAudio,
+                    strings = Strings(AppLanguage.EN),
+                    audio = mockAudio,
+                    progress = { 0f },
                     isPlaying = isPlaying,
                     onClick = {},
                     onPlayPause = {},
                     onNext = {},
-                    onPrev = {}
+                    onPrev = {},
+                    onSwipeUp = {}
                 )
             }
 

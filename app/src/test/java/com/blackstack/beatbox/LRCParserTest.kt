@@ -3,6 +3,10 @@ package com.blackstack.beatbox
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.nulls.shouldNotBeNull
+import com.blackstack.beatbox.lyrics.LRCParser
+import com.blackstack.beatbox.lyrics.LyricsMetadata
+import com.blackstack.beatbox.lyrics.SyncedLyrics
+import com.blackstack.beatbox.lyrics.SyncedLyricsLine
 
 /**
  * Unit tests for LRCParser
@@ -180,5 +184,122 @@ class LRCParserTest : StringSpec({
             parsed.lines[i].timestampMs shouldBe reparsed.lines[i].timestampMs
             parsed.lines[i].text shouldBe reparsed.lines[i].text
         }
+    }
+
+    "parse multiple timestamps on a single line" {
+        val lrcContent = "[00:12.00][00:24.00]Chorus line"
+
+        val lyrics = LRCParser.parse(lrcContent).getOrNull().shouldNotBeNull()
+
+        lyrics.lines.size shouldBe 2
+        lyrics.lines[0].timestampMs shouldBe 12_000L
+        lyrics.lines[0].text shouldBe "Chorus line"
+        lyrics.lines[1].timestampMs shouldBe 24_000L
+        lyrics.lines[1].text shouldBe "Chorus line"
+    }
+
+    "parse hour based timestamps" {
+        val lyrics = LRCParser.parse("[01:02:03.50]Long track line")
+            .getOrNull()
+            .shouldNotBeNull()
+
+        lyrics.lines.single().timestampMs shouldBe 3_723_500L
+    }
+
+    "parse negative offset" {
+        val lrcContent = """
+            [offset:-500]
+            [00:12.00]Line
+        """.trimIndent()
+
+        val lyrics = LRCParser.parse(lrcContent).getOrNull().shouldNotBeNull()
+
+        lyrics.metadata.offset shouldBe -500L
+        lyrics.lines.single().timestampMs shouldBe 11_500L
+    }
+
+    "parse case insensitive positive offset" {
+        val lrcContent = """
+            [OFFSET:+250]
+            [00:12.00]Line
+        """.trimIndent()
+
+        val lyrics = LRCParser.parse(lrcContent).getOrNull().shouldNotBeNull()
+
+        lyrics.metadata.offset shouldBe 250L
+        lyrics.lines.single().timestampMs shouldBe 12_250L
+    }
+
+    "parse enhanced word timestamps" {
+        val lrcContent = "[00:12.00]<00:12.00>Hello <00:12.50>world"
+
+        val line = LRCParser.parse(lrcContent)
+            .getOrNull()
+            .shouldNotBeNull()
+            .lines
+            .single()
+
+        line.text shouldBe "Hello world"
+        line.words.size shouldBe 2
+        line.words[0].text shouldBe "Hello "
+        line.words[0].startMs shouldBe 12_000L
+        line.words[1].text shouldBe "world"
+        line.words[1].startMs shouldBe 12_500L
+        line.words.joinToString("") { it.text } shouldBe line.text
+    }
+
+    "word timestamps receive the line offset" {
+        val lrcContent = """
+            [offset:500]
+            [00:12.00]<00:12.00>Hello <00:12.50>world
+        """.trimIndent()
+
+        val line = LRCParser.parse(lrcContent)
+            .getOrNull()
+            .shouldNotBeNull()
+            .lines
+            .single()
+
+        line.timestampMs shouldBe 12_500L
+        line.words[0].startMs shouldBe 12_500L
+        line.words[1].startMs shouldBe 13_000L
+    }
+
+    "credit and sync lines are filtered out" {
+        val lrcContent = """
+            [00:00.00]作词 : Someone
+            [00:00.00]Synced by BeatBox
+            [00:12.00]Real lyric
+        """.trimIndent()
+
+        val lyrics = LRCParser.parse(lrcContent).getOrNull().shouldNotBeNull()
+
+        lyrics.lines.size shouldBe 1
+        lyrics.lines.single().text shouldBe "Real lyric"
+    }
+
+    "format round trip keeps offset applied once" {
+        val original = """
+            [offset:500]
+            [00:12.00]Line
+        """.trimIndent()
+
+        val parsed = LRCParser.parse(original).getOrNull().shouldNotBeNull()
+        val reparsed = LRCParser.parse(LRCParser.format(parsed)).getOrNull().shouldNotBeNull()
+
+        reparsed.metadata.offset shouldBe 500L
+        reparsed.lines.single().timestampMs shouldBe 12_500L
+    }
+
+    "format round trip keeps word timestamps" {
+        val lrcContent = "[00:12.00]<00:12.00>Hello <00:12.50>world"
+
+        val parsed = LRCParser.parse(lrcContent).getOrNull().shouldNotBeNull()
+        val reparsed = LRCParser.parse(LRCParser.format(parsed)).getOrNull().shouldNotBeNull()
+
+        val line = reparsed.lines.single()
+        line.text shouldBe "Hello world"
+        line.words.size shouldBe 2
+        line.words[1].startMs shouldBe 12_500L
     }
 })

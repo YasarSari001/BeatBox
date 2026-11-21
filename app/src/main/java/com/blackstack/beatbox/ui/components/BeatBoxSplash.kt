@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,8 +36,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.blackstack.beatbox.AppTheme
 import com.blackstack.beatbox.R
+import com.blackstack.beatbox.Strings
 import com.blackstack.beatbox.ui.theme.BeatBoxMotion
 import com.blackstack.beatbox.ui.theme.LocalReducedMotion
 import kotlinx.coroutines.delay
@@ -55,7 +56,7 @@ private val SplashPink = Color(0xFFF472B6)
  */
 @Composable
 fun SplashScreen(
-    theme: AppTheme,
+    strings: Strings,
     onFinish: () -> Unit
 ) {
     val reducedMotion = LocalReducedMotion.current
@@ -103,7 +104,7 @@ fun SplashScreen(
         onFinish()
     }
 
-    AuroraBackground(theme = theme, modifier = Modifier.fillMaxSize()) {
+    AuroraBackground(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
@@ -176,7 +177,11 @@ fun SplashScreen(
                     text = "BeatBox",
                     style = TextStyle(
                         brush = Brush.linearGradient(
-                            listOf(Color.White, Color(0xFFC9F7FF), Color.White)
+                            listOf(
+                                MaterialTheme.colorScheme.onBackground,
+                                MaterialTheme.colorScheme.primary,
+                                MaterialTheme.colorScheme.onBackground
+                            )
                         ),
                         fontSize = 44.sp,
                         fontWeight = FontWeight.Black,
@@ -187,10 +192,10 @@ fun SplashScreen(
                 Spacer(Modifier.height(8.dp))
 
                 Text(
-                    text = "HİSSET • DİNLE • YAŞA",
+                    text = strings.get("splash_tagline"),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = SplashCyan.copy(alpha = 0.82f),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.82f),
                     letterSpacing = 2.4.sp
                 )
 
@@ -201,7 +206,7 @@ fun SplashScreen(
                         .width(168.dp)
                         .height(3.dp)
                         .clip(RoundedCornerShape(2.dp))
-                        .background(Color.White.copy(alpha = 0.12f))
+                        .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.12f))
                 ) {
                     Box(
                         modifier = Modifier

@@ -2,6 +2,7 @@ package com.blackstack.beatbox
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import com.blackstack.beatbox.metadata.calculateInSampleSize
 
 /**
  * Kapak decode'larında kullanılan örnekleme katsayısının birim testleri.

@@ -27,23 +27,22 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PointMode
 import androidx.compose.ui.graphics.graphicsLayer
-import com.blackstack.beatbox.AppTheme
+import androidx.compose.ui.graphics.luminance
 import com.blackstack.beatbox.ui.theme.LocalReducedMotion
 import kotlin.random.Random
 
 /**
  * Aurora Glass tuvali.
  *
- * Seçili temanın dikey gradyanı üzerine albümden türeyen birincil/ikincil
- * renklerden iki yumuşak ışık lekesi ve çok hafif bir grain ekler. Işık
- * lekeleri yavaşça sürüklenir; reduced-motion açıkken statik kalır.
+ * Seçili renk şemasının arka planı üzerine albümden türeyen
+ * birincil/ikincil renklerden iki yumuşak ışık lekesi ve çok hafif bir grain
+ * ekler. Işık lekeleri yavaşça sürüklenir; reduced-motion açıkken statik kalır.
  *
  * Eski `GradientBackground` ile aynı kullanım sözleşmesine sahiptir:
  * [modifier], [content] alanını sarar.
  */
 @Composable
 fun AuroraBackground(
-    theme: AppTheme,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
@@ -51,21 +50,16 @@ fun AuroraBackground(
     val primary = MaterialTheme.colorScheme.primary
     val secondary = MaterialTheme.colorScheme.secondary
     val tertiary = MaterialTheme.colorScheme.tertiary
+    val background = MaterialTheme.colorScheme.background
+    val surface = MaterialTheme.colorScheme.surface
+    val isLight = background.luminance() > 0.5f
 
-    val baseBrush = remember(theme) {
-        if (theme.gradientColors.isNotEmpty()) {
-            Brush.verticalGradient(
-                colors = theme.gradientColors,
-                startY = 0f,
-                endY = 3000f
-            )
-        } else {
-            Brush.verticalGradient(
-                colors = listOf(Color(0xFF07080F), Color(0xFF0D1020), Color(0xFF07080F)),
-                startY = 0f,
-                endY = 3000f
-            )
-        }
+    val baseBrush = remember(background, surface) {
+        Brush.verticalGradient(
+            colors = listOf(background, surface, background),
+            startY = 0f,
+            endY = 3000f
+        )
     }
 
     val drift: State<Float> = if (reducedMotion) {
@@ -171,7 +165,11 @@ fun AuroraBackground(
                         drawPoints(
                             points = points,
                             pointMode = PointMode.Points,
-                            color = Color.White.copy(alpha = 0.028f),
+                            color = if (isLight) {
+                                Color.Black.copy(alpha = 0.02f)
+                            } else {
+                                Color.White.copy(alpha = 0.028f)
+                            },
                             strokeWidth = 1f
                         )
                     }
@@ -184,10 +182,10 @@ fun AuroraBackground(
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        0f to Color.Black.copy(alpha = 0.22f),
+                        0f to Color.Black.copy(alpha = if (isLight) 0.04f else 0.22f),
                         0.18f to Color.Transparent,
                         0.78f to Color.Transparent,
-                        1f to Color.Black.copy(alpha = 0.42f)
+                        1f to Color.Black.copy(alpha = if (isLight) 0.08f else 0.42f)
                     )
                 )
         )

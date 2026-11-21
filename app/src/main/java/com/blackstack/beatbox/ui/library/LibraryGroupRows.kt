@@ -40,8 +40,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.blackstack.beatbox.AlbumArtImage
-import com.blackstack.beatbox.ArtistImage
+import com.blackstack.beatbox.ui.components.AlbumArtImage
+import com.blackstack.beatbox.metadata.ArtistImage
 import com.blackstack.beatbox.ui.components.EmptyArtKind
 import com.blackstack.beatbox.ui.components.EmptyStateArt
 import com.blackstack.beatbox.AudioFile

@@ -229,7 +229,7 @@ fun BeatBoxScaffold(
                             ) {
                                 Icon(
                                     avatarIcons.getOrElse(userProfile.avatarId) { Icons.Rounded.Person },
-                                    contentDescription = "User Profile",
+                                    contentDescription = strings.get("user_profile"),
                                     tint = if (userProfile.isLoggedIn) MaterialTheme.colorScheme.primary else Color.Gray,
                                     modifier = Modifier.size(24.dp)
                                 )
@@ -329,7 +329,7 @@ fun BeatBoxScaffold(
                                     fontSize = 18.sp
                                 )
                                 Text(
-                                    text = "Sleep Timer Active",
+                                    text = strings.get("sleep_timer_active"),
                                     fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurface.copy(0.6f)
                                 )
@@ -377,12 +377,12 @@ fun BeatBoxScaffold(
                                     }
                                     speechLauncher.launch(intent)
                                 } catch (e: Exception) {
-                                    Toast.makeText(ctx, "Sesli arama desteklenmiyor", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(ctx, strings.get("voice_search_unsupported"), Toast.LENGTH_SHORT).show()
                                 }
                             }) {
                                 Icon(
                                     Icons.Rounded.Mic,
-                                    contentDescription = "Voice Search",
+                                    contentDescription = strings.get("voice_search"),
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             }
@@ -415,6 +415,7 @@ fun BeatBoxScaffold(
             // Mini player yalnizca gercekten bir parca seciliyken gorunur.
             if (!showPlayer && currentAudio != null) {
                 MiniPlayerBar(
+                    strings = strings,
                     audio = currentAudio,
                     isPlaying = isPlaying,
                     progress = {

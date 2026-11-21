@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -14,6 +15,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -129,6 +131,13 @@ private fun BeatBoxNavItemView(
             onSelect()
         }
     }
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (pressed) 0.92f else 1f,
+        animationSpec = tween(durationMillis = 120),
+        label = "nav_press_scale"
+    )
     val pill by animateFloatAsState(
         targetValue = if (selected) 1f else 0f,
         animationSpec = BeatBoxMotion.Soft,
@@ -146,6 +155,10 @@ private fun BeatBoxNavItemView(
         modifier = modifier
             .fillMaxHeight()
             .clip(RoundedCornerShape(24.dp))
+            .graphicsLayer {
+                scaleX = pressScale * iconScale
+                scaleY = pressScale * iconScale
+            }
             // Etiket, secili durum ve tiklama tek bir erisilebilirlik dugumunde
             // toplanir; aksi halde TalkBack sekme adini veya "secili" bilgisini
             // ayri dugumlerde gorur.
@@ -162,7 +175,7 @@ private fun BeatBoxNavItemView(
                 selected = selected,
                 onClick = select,
                 role = Role.Tab,
-                interactionSource = remember { MutableInteractionSource() },
+                interactionSource = interactionSource,
                 indication = null
             ),
         contentAlignment = Alignment.Center

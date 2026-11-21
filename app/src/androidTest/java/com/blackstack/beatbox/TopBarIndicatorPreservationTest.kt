@@ -13,6 +13,9 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import com.blackstack.beatbox.ui.components.AudioOutputIndicator
+import com.blackstack.beatbox.Strings
+import com.blackstack.beatbox.AppLanguage
 
 /**
  * Preservation Property Tests for Temporary Top Bar Audio Output Indicator
@@ -59,6 +62,7 @@ class TopBarIndicatorPreservationTest {
         ) { isPlaying ->
             composeTestRule.setContent {
                 AudioOutputIndicator(
+                    strings = Strings(AppLanguage.EN),
                     context = context,
                     isPlaying = isPlaying
                 )
@@ -112,6 +116,7 @@ class TopBarIndicatorPreservationTest {
         ) { isPlaying ->
             composeTestRule.setContent {
                 AudioOutputIndicator(
+                    strings = Strings(AppLanguage.EN),
                     context = context,
                     isPlaying = isPlaying
                 )
@@ -184,6 +189,7 @@ class TopBarIndicatorPreservationTest {
         ) { isPlaying ->
             composeTestRule.setContent {
                 AudioOutputIndicator(
+                    strings = Strings(AppLanguage.EN),
                     context = context,
                     isPlaying = isPlaying
                 )
@@ -232,6 +238,7 @@ class TopBarIndicatorPreservationTest {
         ) { isPlaying ->
             composeTestRule.setContent {
                 AudioOutputIndicator(
+                    strings = Strings(AppLanguage.EN),
                     context = context,
                     isPlaying = isPlaying
                 )

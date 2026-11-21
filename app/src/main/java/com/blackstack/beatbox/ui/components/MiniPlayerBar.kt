@@ -55,9 +55,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.blackstack.beatbox.AlbumArtImage
+import com.blackstack.beatbox.ui.components.AlbumArtImage
 import com.blackstack.beatbox.AudioFile
-import com.blackstack.beatbox.ExplicitBadge
+import com.blackstack.beatbox.ui.components.ExplicitBadge
+import com.blackstack.beatbox.Strings
 import com.blackstack.beatbox.ui.theme.BeatBoxMotion
 import kotlinx.coroutines.delay
 import kotlin.math.abs
@@ -72,6 +73,7 @@ import kotlin.math.abs
  */
 @Composable
 fun MiniPlayerBar(
+    strings: Strings,
     audio: AudioFile?,
     isPlaying: Boolean,
     progress: () -> Float,
@@ -212,7 +214,7 @@ fun MiniPlayerBar(
                     }
                     Spacer(Modifier.height(1.dp))
                     Text(
-                        text = audio?.artist ?: "Müzik çalınmıyor",
+                        text = audio?.artist?.takeIf { it.isNotBlank() } ?: strings.get("unknown_artist"),
                         fontSize = 11.5.sp,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.64f),
                         maxLines = 1,
@@ -230,7 +232,7 @@ fun MiniPlayerBar(
                 ) {
                     Icon(
                         Icons.Rounded.SkipPrevious,
-                        contentDescription = "Önceki",
+                        contentDescription = strings.get("previous"),
                         tint = if (enabled) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.82f)
                         else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.24f),
                         modifier = Modifier.size(23.dp)
@@ -296,7 +298,7 @@ fun MiniPlayerBar(
                 ) {
                     Icon(
                         Icons.Rounded.SkipNext,
-                        contentDescription = "Sonraki",
+                        contentDescription = strings.get("next"),
                         tint = if (enabled) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.82f)
                         else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.24f),
                         modifier = Modifier.size(23.dp)

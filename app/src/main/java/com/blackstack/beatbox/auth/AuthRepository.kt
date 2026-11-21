@@ -2,6 +2,7 @@ package com.blackstack.beatbox.auth
 
 import android.content.Context
 import com.blackstack.beatbox.AuthProvider
+import com.blackstack.beatbox.Strings
 import com.blackstack.beatbox.UserProfile
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
@@ -57,7 +58,7 @@ interface AuthRepository {
  * yokken [firebaseAuth] null kalır; böylece uygulama çökmeden misafir moduna
  * düşer.
  */
-class FirebaseAuthRepository(context: Context) : AuthRepository {
+class FirebaseAuthRepository(context: Context, private val strings: Strings) : AuthRepository {
 
     private val appContext = context.applicationContext
 
@@ -73,16 +74,16 @@ class FirebaseAuthRepository(context: Context) : AuthRepository {
         get() = firebaseAuth != null
 
     override fun currentUser(): UserProfile? =
-        firebaseAuth?.currentUser?.toProfile()
+        firebaseAuth?.currentUser?.toProfile(strings)
 
     override suspend fun signInWithEmail(email: String, password: String): AuthResult {
         val auth = firebaseAuth ?: return notConfigured()
         return try {
             val result = auth.signInWithEmailAndPassword(email, password).await()
-            result.user?.toProfile()?.let(AuthResult::Success)
-                ?: AuthResult.Failure("Oturum bilgisi alınamadı.")
+            result.user?.toProfile(strings)?.let(AuthResult::Success)
+                ?: AuthResult.Failure(strings.get("err_session_not_found"))
         } catch (e: Exception) {
-            AuthResult.Failure(e.toAuthMessage())
+            AuthResult.Failure(e.toAuthMessage(strings))
         }
     }
 
@@ -95,7 +96,7 @@ class FirebaseAuthRepository(context: Context) : AuthRepository {
         return try {
             val result = auth.createUserWithEmailAndPassword(email, password).await()
             val user = result.user
-                ?: return AuthResult.Failure("Hesap oluşturuldu ancak oturum bilgisi alınamadı.")
+                ?: return AuthResult.Failure(strings.get("err_account_no_session"))
 
             val name = displayName.trim().ifBlank { email.substringBefore("@") }
             runCatching {
@@ -108,9 +109,9 @@ class FirebaseAuthRepository(context: Context) : AuthRepository {
             // Doğrulama e-postası gönderilemezse kayıt yine de başarılı sayılır.
             runCatching { user.sendEmailVerification().await() }
 
-            AuthResult.Success(user.toProfile().copy(displayName = name))
+            AuthResult.Success(user.toProfile(strings).copy(displayName = name))
         } catch (e: Exception) {
-            AuthResult.Failure(e.toAuthMessage())
+            AuthResult.Failure(e.toAuthMessage(strings))
         }
     }
 
@@ -119,10 +120,10 @@ class FirebaseAuthRepository(context: Context) : AuthRepository {
         return try {
             val credential = GoogleAuthProvider.getCredential(idToken, null)
             val result = auth.signInWithCredential(credential).await()
-            result.user?.toProfile()?.let(AuthResult::Success)
-                ?: AuthResult.Failure("Google oturumu açılamadı.")
+            result.user?.toProfile(strings)?.let(AuthResult::Success)
+                ?: AuthResult.Failure(strings.get("err_google_session"))
         } catch (e: Exception) {
-            AuthResult.Failure(e.toAuthMessage())
+            AuthResult.Failure(e.toAuthMessage(strings))
         }
     }
 
@@ -130,9 +131,9 @@ class FirebaseAuthRepository(context: Context) : AuthRepository {
         val auth = firebaseAuth ?: return notConfigured()
         return try {
             auth.sendPasswordResetEmail(email).await()
-            AuthResult.Message("Şifre sıfırlama bağlantısı e-posta adresinize gönderildi.")
+            AuthResult.Message(strings.get("reset_email_sent"))
         } catch (e: Exception) {
-            AuthResult.Failure(e.toAuthMessage())
+            AuthResult.Failure(e.toAuthMessage(strings))
         }
     }
 
@@ -141,7 +142,7 @@ class FirebaseAuthRepository(context: Context) : AuthRepository {
     }
 
     private fun notConfigured() = AuthResult.Failure(
-        "Firebase yapılandırılmadı. app/google-services.json dosyasını ekleyip yeniden derleyin."
+        strings.get("firebase_not_configured")
     )
 }
 
@@ -154,7 +155,7 @@ fun signOutFirebase(context: Context) {
     }
 }
 
-private fun FirebaseUser.toProfile(): UserProfile {
+private fun FirebaseUser.toProfile(strings: Strings): UserProfile {
     val provider = when {
         providerData.any { it.providerId == GoogleAuthProvider.PROVIDER_ID } -> AuthProvider.GOOGLE
         providerData.any { it.providerId == "phone" } -> AuthProvider.PHONE
@@ -166,7 +167,7 @@ private fun FirebaseUser.toProfile(): UserProfile {
     val name = displayName?.takeIf { it.isNotBlank() }
         ?: mail.substringBefore("@").takeIf { it.isNotBlank() }
         ?: phone.takeIf { it.isNotBlank() }
-        ?: "BeatBox Dinleyicisi"
+        ?: strings.get("listener")
 
     return UserProfile(
         id = uid,
@@ -179,31 +180,29 @@ private fun FirebaseUser.toProfile(): UserProfile {
     )
 }
 
-private fun Throwable.toAuthMessage(): String =
-    if (this is FirebaseAuthException) authErrorMessage(errorCode) else GENERIC_AUTH_ERROR
+private fun Throwable.toAuthMessage(strings: Strings): String =
+    if (this is FirebaseAuthException) authErrorMessage(errorCode, strings)
+    else strings.get("auth_generic_error")
 
 /**
- * Firebase hata kodlarını kullanıcıya gösterilebilir Türkçe mesajlara çevirir.
- * Bilinmeyen kodlarda İngilizce teknik metin göstermek yerine genel mesaj döner.
+ * Firebase hata kodlarını yerelleştirilmiş kullanıcı mesajlarına çevirir.
+ * Bilinmeyen kodlarda teknik metin yerine genel mesaj döner.
  */
-internal fun authErrorMessage(errorCode: String?): String = when (errorCode) {
-    "ERROR_INVALID_EMAIL" -> "Geçerli bir e-posta adresi girin."
-    "ERROR_WRONG_PASSWORD", "ERROR_INVALID_CREDENTIAL" -> "E-posta veya şifre hatalı."
-    "ERROR_USER_NOT_FOUND" -> "Bu e-posta ile kayıtlı bir hesap bulunamadı."
-    "ERROR_EMAIL_ALREADY_IN_USE" -> "Bu e-posta adresi zaten kullanılıyor."
-    "ERROR_WEAK_PASSWORD" -> "Şifre en az 6 karakter olmalı."
-    "ERROR_MISSING_EMAIL" -> "E-posta adresi gerekli."
-    "ERROR_MISSING_PASSWORD" -> "Şifre gerekli."
-    "ERROR_TOO_MANY_REQUESTS" -> "Çok fazla deneme yapıldı. Lütfen biraz sonra tekrar deneyin."
-    "ERROR_NETWORK_REQUEST_FAILED" -> "İnternet bağlantınızı kontrol edin."
-    "ERROR_USER_DISABLED" -> "Bu hesap devre dışı bırakılmış."
-    "ERROR_OPERATION_NOT_ALLOWED" ->
-        "E-posta/şifre girişi Firebase konsolunda etkin değil."
+internal fun authErrorMessage(errorCode: String?, strings: Strings): String = when (errorCode) {
+    "ERROR_INVALID_EMAIL" -> strings.get("err_invalid_email")
+    "ERROR_WRONG_PASSWORD", "ERROR_INVALID_CREDENTIAL" -> strings.get("auth_wrong_password")
+    "ERROR_USER_NOT_FOUND" -> strings.get("auth_user_not_found")
+    "ERROR_EMAIL_ALREADY_IN_USE" -> strings.get("auth_email_in_use")
+    "ERROR_WEAK_PASSWORD" -> strings.get("err_password_min")
+    "ERROR_MISSING_EMAIL" -> strings.get("auth_missing_email")
+    "ERROR_MISSING_PASSWORD" -> strings.get("auth_missing_password")
+    "ERROR_TOO_MANY_REQUESTS" -> strings.get("auth_too_many_requests")
+    "ERROR_NETWORK_REQUEST_FAILED" -> strings.get("auth_network")
+    "ERROR_USER_DISABLED" -> strings.get("auth_user_disabled")
+    "ERROR_OPERATION_NOT_ALLOWED" -> strings.get("auth_operation_not_allowed")
     "ERROR_ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL" ->
-        "Bu e-posta farklı bir giriş yöntemiyle kayıtlı."
-    "ERROR_REQUIRES_RECENT_LOGIN" -> "Bu işlem için yeniden giriş yapmanız gerekiyor."
-    "ERROR_INVALID_ACTION_CODE" -> "Bağlantının süresi dolmuş veya geçersiz."
-    else -> GENERIC_AUTH_ERROR
+        strings.get("auth_account_diff_credential")
+    "ERROR_REQUIRES_RECENT_LOGIN" -> strings.get("auth_requires_recent_login")
+    "ERROR_INVALID_ACTION_CODE" -> strings.get("auth_invalid_action_code")
+    else -> strings.get("auth_generic_error")
 }
-
-private const val GENERIC_AUTH_ERROR = "Giriş yapılamadı. Lütfen tekrar deneyin."

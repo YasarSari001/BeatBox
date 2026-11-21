@@ -50,7 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.blackstack.beatbox.AlbumArtImage
+import com.blackstack.beatbox.ui.components.AlbumArtImage
 import com.blackstack.beatbox.AudioFile
 import com.blackstack.beatbox.Strings
 import com.blackstack.beatbox.ui.theme.LocalReducedMotion

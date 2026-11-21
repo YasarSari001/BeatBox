@@ -2,6 +2,7 @@ package com.blackstack.beatbox
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import com.blackstack.beatbox.playback.mergeSessionProfile
 
 /**
  * Yerel profil tercihlerinin Firebase oturumuyla birleştirilmesini doğrular.

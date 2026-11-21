@@ -3,6 +3,8 @@ package com.blackstack.beatbox
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
+import com.blackstack.beatbox.metadata.SongMetadataCandidate
+import com.blackstack.beatbox.metadata.SongMetadataMatcher
 
 /**
  * Çevrim içi şarkı eşleştirmesinin güvenli çalışmasını doğrular.
