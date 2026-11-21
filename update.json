@@ -1,6 +1,6 @@
 {
-  "versionCode": 8,
-  "versionName": "3.5",
+  "versionCode": 9,
+  "versionName": "3.6",
   "apkUrl": "https://github.com/YasarSari001/BeatBox/releases/latest/download/BeatBox.apk",
-  "changelog": "BeatBox 3.5\n• Güncelleme artık GitHub API üzerinden okunuyor: yeni sürüm anında görünüyor (raw CDN gecikmesi giderildi)\n• Ayarlar → Hakkında: \"Güncellemeyi kontrol et\" düğmesi\n• APK kurulumu FileProvider ile düzeltildi; indirme hatasında uyarı gösteriliyor\n• Giriş ekranı aurora tasarımıyla yenilendi"
+  "changelog": "BeatBox 3.6\n• Açılış animasyonu yenilendi: logodan yayılan halkalar, dönen ışıltı, harf aralığı animasyonu ve ekolayzer çubukları\n• Açılış süresi 1.5 saniye; azaltılmış hareket ayarına saygılı\n• Şarkı sözü ekranı, entegrasyonlar ve giriş ekranı yenilemesi dahil\n• Güncelleme her açılışta kontrol edilir ve yeni sürüm anında görünür"
 }
