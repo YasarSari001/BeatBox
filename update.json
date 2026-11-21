@@ -1,6 +1,6 @@
 {
-  "versionCode": 7,
-  "versionName": "3.4",
+  "versionCode": 8,
+  "versionName": "3.4.1-test",
   "apkUrl": "https://github.com/YasarSari001/BeatBox/releases/latest/download/BeatBox.apk",
-  "changelog": "BeatBox 3.4\n• Ayarlar → Hakkında: \"Güncellemeyi kontrol et\" düğmesi eklendi\n• Güncelleme sunucusu önbelleği atlanıyor; yeni sürüm anında görünür\n• APK kurulumu FileProvider ile düzeltildi (kurulum başlamama sorunu)\n• İndirme başarısız olursa artık sessiz kalmıyor, uyarı gösteriyor\n• Giriş ekranı aurora tasarımıyla yenilendi"
+  "changelog": "Test guncellemesi: diyalog ve kurulum akisi dogrulamasi."
 }
