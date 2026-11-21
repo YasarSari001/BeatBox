@@ -1,6 +1,6 @@
 {
-  "versionCode": 5,
-  "versionName": "3.2",
+  "versionCode": 6,
+  "versionName": "3.3",
   "apkUrl": "https://github.com/YasarSari001/BeatBox/releases/latest/download/BeatBox.apk",
-  "changelog": "BeatBox 3.2\n• Güncelleme artık her açılışta ve uygulamaya her dönüşte kontrol edilir\n• Önceki sürümde 24 saatlik bekleme yüzünden güncelleme uyarısı gecikiyordu\n• Şarkı sözü ekranı, sağlayıcı seçimi, metin boyutu ve ışıma\n• ListenBrainz scrobble entegrasyonu\n• Ayarlar → Entegrasyonlar ekranı"
+  "changelog": "BeatBox 3.3\n• Giriş ekranı yenilendi: aurora başlık bandı, logo ve hap sekmeler\n• Giriş/Kayıt seçimi tek dokunuşla, form alanları daha ferah\n• Misafir girişi ve Google girişi yeni tasarıma uyarlandı\n• Güncelleme her açılışta ve uygulamaya her dönüşte kontrol ediliyor"
 }
