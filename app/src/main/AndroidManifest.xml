@@ -61,6 +61,17 @@
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
 
+        <!-- İndirilen güncelleme APK'sını paket yükleyiciye güvenle açmak için. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <!--
             Receives hardware and Bluetooth media button intents and forwards
             them to MediaPlaybackService, which routes them into the

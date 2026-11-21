@@ -1088,5 +1088,17 @@ internal val extraTranslations: Map<String, Map<String, String>> = mapOf(
     ),
     "update_install_failed" to mapOf(
         "en" to "Could not install the update.", "tr" to "Güncelleme yüklenemedi."
+    ),
+    "update_check" to mapOf(
+        "en" to "Check for updates", "tr" to "Güncellemeyi kontrol et"
+    ),
+    "update_check_desc" to mapOf(
+        "en" to "Look for a newer version now", "tr" to "Şimdi yeni sürüm var mı bak"
+    ),
+    "update_up_to_date" to mapOf(
+        "en" to "You are on the latest version.", "tr" to "Uygulama güncel."
+    ),
+    "update_check_failed" to mapOf(
+        "en" to "Could not reach the update server.", "tr" to "Güncelleme sunucusuna ulaşılamadı."
     )
 )

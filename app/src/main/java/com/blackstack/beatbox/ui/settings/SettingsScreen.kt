@@ -55,6 +55,7 @@ import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PhoneAndroid
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.ScreenLockLandscape
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.Speed
@@ -91,6 +92,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import com.blackstack.beatbox.ui.components.AlbumArtCache
 import com.blackstack.beatbox.AppLanguage
+import com.blackstack.beatbox.BuildConfig
 import com.blackstack.beatbox.metadata.ArtistImageProvider
 import com.blackstack.beatbox.MainActivity
 import com.blackstack.beatbox.Strings
@@ -420,9 +422,17 @@ private fun MainSettingsPage(
                         SettingsActionRow(
                             icon = Icons.Rounded.Info,
                             title = strings.get("about"),
-                            value = "BeatBox v3.0",
+                            value = "BeatBox ${BuildConfig.VERSION_NAME}",
                             showChevron = true,
                             onClick = { showAboutDialog = true },
+                        )
+                        SettingsDivider()
+                        SettingsActionRow(
+                            icon = Icons.Rounded.Refresh,
+                            title = strings.get("update_check"),
+                            subtitle = strings.get("update_check_desc"),
+                            showChevron = true,
+                            onClick = { player.checkForUpdatesManually() },
                         )
                     }
                 }

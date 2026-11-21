@@ -251,6 +251,37 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         }
     }
 
+    /**
+     * Ayarlar > Güncellemeyi kontrol et: kullanıcı bekliyorken sonuç hemen
+     * bildirilir; "Sonra" ile atlanmış sürüm de yeniden gösterilir.
+     */
+    fun checkForUpdatesManually() {
+        if (updateCheckRunning) return
+        updateCheckRunning = true
+        lifecycleScope.launch {
+            val result = UpdateChecker.check()
+            updateCheckRunning = false
+            when (result) {
+                is UpdateChecker.CheckResult.Available -> {
+                    prefs.edit { remove("update_skipped_version") }
+                    pendingUpdate = result.info
+                }
+                UpdateChecker.CheckResult.UpToDate ->
+                    Toast.makeText(
+                        this@MainActivity,
+                        Strings(appLanguageOf(this@MainActivity)).get("update_up_to_date"),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                UpdateChecker.CheckResult.Failed ->
+                    Toast.makeText(
+                        this@MainActivity,
+                        Strings(appLanguageOf(this@MainActivity)).get("update_check_failed"),
+                        Toast.LENGTH_LONG
+                    ).show()
+            }
+        }
+    }
+
     private fun skipUpdate(info: UpdateInfo) {
         pendingUpdate = null
         prefs.edit { putInt("update_skipped_version", info.versionCode) }
