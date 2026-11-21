@@ -62,6 +62,8 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     var isPlaying = mutableStateOf(false)
     /** GitHub'daki update.json yeni sürüm bildirdiğinde dolar. */
     var pendingUpdate by mutableStateOf<UpdateInfo?>(null)
+    /** Aynı anda birden fazla güncelleme isteği gitmesini engeller. */
+    private var updateCheckRunning = false
 
     // Constants for shake detection
     private companion object {
@@ -71,7 +73,6 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         private const val FADE_STEP = 0.05f
         private const val FADE_DELAY_MS = 1500L
         private const val DELETE_REQUEST_CODE = 1001
-        private const val UPDATE_CHECK_INTERVAL_MS = 24L * 60 * 60 * 1000
     }
     
     var onSongComplete: (() -> Unit)? = null
@@ -229,21 +230,19 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         
         setContent { BeatBoxRoot() }
 
-        checkForUpdatesOnStart()
+        checkForUpdates()
     }
 
     /**
-     * Açılışta GitHub'daki update.json okunur; 24 saatte bir denetlenir ve
-     * kullanıcı "Sonra" dediyse o sürüm atlanır.
+     * Uygulama her açıldığında ve her öne geldiğinde GitHub'daki update.json
+     * okunur; kullanıcı "Sonra" dediyse o sürüm atlanır.
      */
-    private fun checkForUpdatesOnStart() {
-        val now = System.currentTimeMillis()
-        val lastCheck = prefs.getLong("update_last_check", 0L)
-        if (now - lastCheck < UPDATE_CHECK_INTERVAL_MS) return
-
+    private fun checkForUpdates() {
+        if (updateCheckRunning || pendingUpdate != null) return
+        updateCheckRunning = true
         lifecycleScope.launch {
             val info = UpdateChecker.fetch()
-            prefs.edit { putLong("update_last_check", System.currentTimeMillis()) }
+            updateCheckRunning = false
             if (info != null && UpdateChecker.isNewer(info) &&
                 info.versionCode != prefs.getInt("update_skipped_version", 0)
             ) {
@@ -610,6 +609,9 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         } else {
             window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
+
+        // Her öne gelişte güncelleme denetlenir (açılış da buradan geçer).
+        checkForUpdates()
     }
     
     @Deprecated("Deprecated in Java")

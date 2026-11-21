@@ -1,6 +1,6 @@
 {
-  "versionCode": 4,
-  "versionName": "3.1",
+  "versionCode": 5,
+  "versionName": "3.2",
   "apkUrl": "https://github.com/YasarSari001/BeatBox/releases/latest/download/BeatBox.apk",
-  "changelog": "BeatBox 3.1\n• Şarkı sözü ekranı: sağlayıcı seçimi, metin boyutu, ışıma, dokunarak atlama\n• ListenBrainz scrobble entegrasyonu\n• Ayarlar → Entegrasyonlar ekranı\n• Uygulama içi otomatik güncelleme (bu ekran)\n• API anahtarı gerektiren sağlayıcılar kaldırıldı\n• Arayüz ve paket yapısı düzenlendi"
+  "changelog": "BeatBox 3.2\n• Güncelleme artık her açılışta ve uygulamaya her dönüşte kontrol edilir\n• Önceki sürümde 24 saatlik bekleme yüzünden güncelleme uyarısı gecikiyordu\n• Şarkı sözü ekranı, sağlayıcı seçimi, metin boyutu ve ışıma\n• ListenBrainz scrobble entegrasyonu\n• Ayarlar → Entegrasyonlar ekranı"
 }
