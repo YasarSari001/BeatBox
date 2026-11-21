@@ -19,6 +19,7 @@ import android.content.IntentFilter
 import android.net.Uri
 import android.os.Environment
 import android.provider.Settings
+import android.util.Base64
 import android.util.Log
 import android.widget.Toast
 import androidx.core.content.ContextCompat
@@ -49,6 +50,14 @@ object UpdateChecker {
      */
     const val MANIFEST_URL =
         "https://raw.githubusercontent.com/YasarSari001/BeatBox/main/update.json"
+
+    /**
+     * Asıl kaynak: GitHub API. raw.githubusercontent.com dosyayı dakikalarca
+     * önbellekte tuttuğu için yeni yayınlanan sürüm geç görünüyordu; API çok
+     * daha kısa önbellek kullanır. Erişilemezse [MANIFEST_URL] denenir.
+     */
+    private const val API_URL =
+        "https://api.github.com/repos/YasarSari001/BeatBox/contents/update.json"
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(8, TimeUnit.SECONDS)
@@ -84,7 +93,36 @@ object UpdateChecker {
     }
 
     /** Ağdan sürüm dosyasını okur; hata/bağlantı yoksa `null`. */
-    private fun fetchBody(): String? = try {
+    private fun fetchBody(): String? = fetchFromApi() ?: fetchFromRaw()
+
+    /** GitHub Contents API'si dosyayı base64 içerikle döner. */
+    private fun fetchFromApi(): String? = try {
+        val request = Request.Builder()
+            .url("$API_URL?ts=${System.currentTimeMillis()}")
+            .header("Accept", "application/vnd.github+json")
+            .build()
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                Log.w(TAG, "api HTTP ${response.code}")
+                null
+            } else {
+                val json = JSONObject(response.body?.string().orEmpty())
+                val encoded = json.optString("content")
+                    .replace("\n", "")
+                    .replace("\r", "")
+                if (encoded.isBlank()) {
+                    null
+                } else {
+                    String(Base64.decode(encoded, Base64.DEFAULT), Charsets.UTF_8)
+                }
+            }
+        }
+    } catch (e: Exception) {
+        Log.w(TAG, "api okunamadi", e)
+        null
+    }
+
+    private fun fetchFromRaw(): String? = try {
         val request = Request.Builder()
             // CDN önbelleğini atlamak için zaman damgası eklenir.
             .url("$MANIFEST_URL?ts=${System.currentTimeMillis()}")
@@ -93,13 +131,13 @@ object UpdateChecker {
             .build()
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
-                Log.w(TAG, "update.json HTTP ${response.code}")
+                Log.w(TAG, "raw HTTP ${response.code}")
                 return null
             }
             response.body?.string().orEmpty()
         }
     } catch (e: Exception) {
-        Log.w(TAG, "update.json okunamadi", e)
+        Log.w(TAG, "raw okunamadi", e)
         null
     }
 
