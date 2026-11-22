@@ -62,6 +62,7 @@ import com.blackstack.beatbox.lyrics.LyricsProvider
 import com.blackstack.beatbox.ui.lyrics.LyricsScreen
 import com.blackstack.beatbox.lyrics.LyricsViewModel
 import com.blackstack.beatbox.ui.components.MusicVisualizer
+import com.blackstack.beatbox.ui.components.VisualizerState
 import com.blackstack.beatbox.ui.components.SongItem
 import com.blackstack.beatbox.ui.components.formatTime
 import com.blackstack.beatbox.ui.theme.BeatBoxMotion
@@ -100,8 +101,7 @@ fun FullScreenPlayer(
     onSelectFromQueue: ((AudioFile) -> Unit)? = null,
     onOpenEQ: (() -> Unit)? = null,
     onOpenSleepTimer: (() -> Unit)? = null,
-    visualizerLevel: Float = 0f,
-    visualizerWaveform: FloatArray = FloatArray(0),
+    visualizerState: VisualizerState,
     /** Mini oynatıcı kapağının açılış anındaki konumu; hero morph başlangıcı. */
     heroSourceBounds: Rect? = null
 ) {
@@ -120,7 +120,6 @@ fun FullScreenPlayer(
     // Kapak, mini oynatıcıdaki küçük boyutundan tam ekran boyutuna büyür.
     // Gerçek kapak, morph tamamlanana kadar görünmez kalır; geçiş katmanı
     // aradaki kareyi çizer.
-    val density = LocalDensity.current
     val reducedMotion = LocalReducedMotion.current
     val performanceMode = rememberPerformanceMode()
     val scope = rememberCoroutineScope()
@@ -419,8 +418,7 @@ fun FullScreenPlayer(
 
             MusicVisualizer(
                 isPlaying = isPlaying,
-                level = visualizerLevel,
-                waveform = visualizerWaveform,
+                state = visualizerState,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(38.dp)
@@ -437,45 +435,25 @@ fun FullScreenPlayer(
 
             Spacer(Modifier.height(2.dp))
 
-            val trackDuration = a.duration.toFloat().takeIf { it > 0f } ?: 1f
-            WaveformSeekBar(
-                progress = (pos / trackDuration).coerceIn(0f, 1f),
-                durationMs = a.duration.toLong(),
+            // Konum yalnızca bu bölümde okunur; 120 ms'lik konum
+            // güncellemeleri oynatıcının tamamını değil, yalnızca bu satırı
+            // yeniden compose eder.
+            PlayerSeekSection(
+                positionProvider = { pos },
+                durationMs = a.duration,
                 audioKey = a.id,
                 isPlaying = isPlaying,
-                liveWaveform = visualizerWaveform,
+                visualizerState = visualizerState,
                 contentDescription = strings.get("seek_position"),
-                onScrub = { fraction ->
-                    drag = true
-                    pos = fraction * trackDuration
-                },
+                onScrubStart = { drag = true },
+                onScrub = { fraction -> pos = fraction * trackDurationOf(a.duration) },
                 onScrubFinished = { fraction ->
-                    val target = (fraction * trackDuration).toInt()
+                    val target = (fraction * trackDurationOf(a.duration)).toInt()
                     pos = target.toFloat()
                     player.seekTo(target)
                     drag = false
-                },
-                modifier = Modifier.fillMaxWidth()
+                }
             )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = formatTime(pos.toLong()),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color.White.copy(alpha = 0.72f)
-                )
-                Text(
-                    text = formatTime(a.duration),
-                    fontSize = 11.sp,
-                    color = Color.White.copy(alpha = 0.55f)
-                )
-            }
 
             Spacer(Modifier.height(8.dp))
 
@@ -525,34 +503,14 @@ fun FullScreenPlayer(
         // Hero morph geçiş katmanı: mini oynatıcıdaki kapak büyüyerek
         // tam ekran kapağıın yerine oturur. Kaynak ve hedef ölçüler kök
         // penceredeki koordinatlardır.
-        val heroSource = validSource
-        val heroTarget = artBounds
-        if (heroSource != null && heroTarget != null && morph.value < 0.999f) {
-            val fraction = morph.value
-            val left = heroSource.left + (heroTarget.left - heroSource.left) * fraction
-            val top = heroSource.top + (heroTarget.top - heroSource.top) * fraction
-            val widthPx = heroSource.width + (heroTarget.width - heroSource.width) * fraction
-            val heightPx = heroSource.height + (heroTarget.height - heroSource.height) * fraction
-            val radius = (15f + (26f - 15f) * fraction).dp
-            val morphShape = RoundedCornerShape(radius)
-            Box(
-                modifier = Modifier
-                    .offset { IntOffset(left.roundToInt(), top.roundToInt()) }
-                    .size(
-                        with(density) { widthPx.toDp() },
-                        with(density) { heightPx.toDp() }
-                    )
-                    .shadow(26.dp, morphShape, spotColor = Color.Black)
-                    .clip(morphShape)
-            ) {
-                AlbumArtImage(a, Modifier.fillMaxSize(), true)
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .border(1.dp, Color.White.copy(alpha = 0.12f), morphShape)
-                )
-            }
-        }
+        // Geçiş katmanı ayrı bir bileşen: morph her karede ilerlerken yalnızca
+        // bu katman yeniden compose olur, oynatıcının geri kalanı değil.
+        HeroMorphOverlay(
+            progress = { morph.value },
+            source = validSource,
+            target = artBounds,
+            audio = a
+        )
 
         AnimatedVisibility(
             visible = showLyrics,
@@ -697,6 +655,105 @@ fun FullScreenPlayer(
                 }
             )
         }
+    }
+}
+
+private fun trackDurationOf(durationMs: Long): Float =
+    durationMs.toFloat().takeIf { it > 0f } ?: 1f
+
+/**
+ * Waveform ve süre satırı.
+ *
+ * Oynatma konumu yalnızca burada okunur; saniyede birkaç kez güncellenen
+ * konum, oynatıcının tüm ağacını değil yalnızca bu bölümü geçersiz kılar.
+ */
+@Composable
+private fun PlayerSeekSection(
+    positionProvider: () -> Float,
+    durationMs: Long,
+    audioKey: Long,
+    isPlaying: Boolean,
+    visualizerState: VisualizerState,
+    contentDescription: String,
+    onScrubStart: () -> Unit,
+    onScrub: (Float) -> Unit,
+    onScrubFinished: (Float) -> Unit
+) {
+    val pos = positionProvider()
+    val trackDuration = trackDurationOf(durationMs)
+    WaveformSeekBar(
+        progress = (pos / trackDuration).coerceIn(0f, 1f),
+        durationMs = durationMs,
+        audioKey = audioKey,
+        isPlaying = isPlaying,
+        visualizerState = visualizerState,
+        contentDescription = contentDescription,
+        onScrub = { fraction ->
+            onScrubStart()
+            onScrub(fraction)
+        },
+        onScrubFinished = onScrubFinished,
+        modifier = Modifier.fillMaxWidth()
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = formatTime(pos.toLong()),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+            color = Color.White.copy(alpha = 0.72f)
+        )
+        Text(
+            text = formatTime(durationMs),
+            fontSize = 11.sp,
+            color = Color.White.copy(alpha = 0.55f)
+        )
+    }
+}
+
+/**
+ * Kapak morph geçiş katmanı.
+ *
+ * İlerleme yalnızca burada okunduğu için animasyon sürerken oynatıcının
+ * tamamı değil, sadece bu katman her karede yeniden compose edilir.
+ */
+@Composable
+private fun HeroMorphOverlay(
+    progress: () -> Float,
+    source: Rect?,
+    target: Rect?,
+    audio: AudioFile
+) {
+    val fraction = progress()
+    if (source == null || target == null || fraction >= 0.999f) return
+    val density = LocalDensity.current
+    val left = source.left + (target.left - source.left) * fraction
+    val top = source.top + (target.top - source.top) * fraction
+    val widthPx = source.width + (target.width - source.width) * fraction
+    val heightPx = source.height + (target.height - source.height) * fraction
+    val radius = (15f + (26f - 15f) * fraction).dp
+    val morphShape = RoundedCornerShape(radius)
+    Box(
+        modifier = Modifier
+            .offset { IntOffset(left.roundToInt(), top.roundToInt()) }
+            .size(
+                with(density) { widthPx.toDp() },
+                with(density) { heightPx.toDp() }
+            )
+            .shadow(26.dp, morphShape, spotColor = Color.Black)
+            .clip(morphShape)
+    ) {
+        AlbumArtImage(audio, Modifier.fillMaxSize(), true)
+        Box(
+            Modifier
+                .fillMaxSize()
+                .border(1.dp, Color.White.copy(alpha = 0.12f), morphShape)
+        )
     }
 }
 

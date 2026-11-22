@@ -73,8 +73,7 @@ fun BeatBoxOverlays(
     favoriteIds: Set<String>,
     currentEQPreset: EQPreset,
     onEQPresetChange: (EQPreset) -> Unit,
-    visualizerLevel: Float,
-    visualizerWaveform: FloatArray,
+    visualizerState: VisualizerState,
     heroSourceBounds: Rect?,
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
@@ -121,7 +120,7 @@ fun BeatBoxOverlays(
             EQDialog(
                 strings = strings,
                 currentEQPreset = currentEQPreset,
-                visualizerWaveform = visualizerWaveform,
+                visualizerState = visualizerState,
                 onPresetSelected = { preset ->
                     player.setEQPreset(preset)
                     onEQPresetChange(preset)
@@ -178,8 +177,7 @@ fun BeatBoxOverlays(
                     onSelectFromQueue = onSelectFromQueue,
                     onOpenEQ = { overlays.showEQ = true },
                     onOpenSleepTimer = { overlays.showSleepTimer = true },
-                    visualizerLevel = visualizerLevel,
-                    visualizerWaveform = visualizerWaveform,
+                    visualizerState = visualizerState,
                     heroSourceBounds = heroSourceBounds
                 )
             }

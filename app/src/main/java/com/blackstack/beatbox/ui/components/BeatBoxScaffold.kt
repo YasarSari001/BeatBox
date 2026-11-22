@@ -99,8 +99,7 @@ fun BeatBoxScaffold(
     speechLauncher: ActivityResultLauncher<Intent>,
     tempoViz: Boolean,
     isPlaying: Boolean,
-    visualizerLevel: Float,
-    visualizerWaveform: FloatArray,
+    visualizerState: VisualizerState,
     userProfile: UserProfile,
     avatarIcons: List<ImageVector>,
     currentAudio: AudioFile?,
@@ -215,7 +214,7 @@ fun BeatBoxScaffold(
                             contentAlignment = Alignment.Center
                         ) {
                             if (tempoViz) {
-                                MusicVisualizer(isPlaying, visualizerLevel, visualizerWaveform, modifier = Modifier.height(30.dp))
+                                MusicVisualizer(isPlaying, visualizerState, modifier = Modifier.height(30.dp))
                             }
                         }
 

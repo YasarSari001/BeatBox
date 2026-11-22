@@ -27,6 +27,7 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.sp
+import com.blackstack.beatbox.ui.components.VisualizerState
 import com.blackstack.beatbox.ui.components.formatTime
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.progressBarRangeInfo
@@ -51,7 +52,8 @@ fun WaveformSeekBar(
     durationMs: Long,
     audioKey: Long,
     isPlaying: Boolean,
-    liveWaveform: FloatArray,
+    /** Canlı genlik verisi; yalnızca bu bileşende okunur. */
+    visualizerState: VisualizerState,
     contentDescription: String,
     onScrub: (Float) -> Unit,
     onScrubFinished: (Float) -> Unit,
@@ -60,6 +62,7 @@ fun WaveformSeekBar(
     var scrubFraction by remember { mutableStateOf<Float?>(null) }
     val shown = (scrubFraction ?: progress).coerceIn(0f, 1f)
     val envelope = remember(audioKey) { waveformEnvelope(audioKey) }
+    val liveWaveform = visualizerState.waveform
 
     val energy = remember(liveWaveform, isPlaying) {
         if (!isPlaying || liveWaveform.isEmpty()) {

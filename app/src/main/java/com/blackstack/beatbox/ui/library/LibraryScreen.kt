@@ -28,6 +28,7 @@ import com.blackstack.beatbox.SortOption
 import com.blackstack.beatbox.Strings
 import com.blackstack.beatbox.groupSongsByArtist
 import com.blackstack.beatbox.ui.components.BeatBoxSongRow
+import com.blackstack.beatbox.ui.library.sortedByLibraryKey
 import com.blackstack.beatbox.ui.components.EmptyArtKind
 import com.blackstack.beatbox.ui.components.PullToRefresh
 import kotlinx.coroutines.launch
@@ -135,23 +136,21 @@ fun LibraryScreen(
                     songs = sortedByTitle(songs)
                 )
             }
-            .sortedWith(
-                compareBy<LibraryAlbum> { librarySortKey(it.title) }
-                    .thenBy { it.title }
-            )
+            .let { sortedByLibraryKey(it) { album -> album.title } }
     }
 
     val artists = remember(songsSorted, strings) {
         groupSongsByArtist(songsSorted, strings.get("unknown_artist"))
             .entries
-            .sortedBy { librarySortKey(it.key) }
+            .toList()
+            .let { sortedByLibraryKey(it) { entry -> entry.key } }
     }
 
     val folders = remember(songsSorted) {
         songsSorted
             .groupBy { it.folderName.ifBlank { "/" } }
             .map { (name, songs) -> LibraryFolder(name, sortedByTitle(songs)) }
-            .sortedBy { librarySortKey(it.name) }
+            .let { sortedByLibraryKey(it) { folder -> folder.name } }
     }
 
     val totalMinutes = remember(allAudioList) {

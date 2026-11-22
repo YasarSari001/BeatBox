@@ -75,6 +75,7 @@ import com.blackstack.beatbox.ui.components.AlbumArtImage
 import com.blackstack.beatbox.metadata.ArtistImage
 import com.blackstack.beatbox.AudioFile
 import com.blackstack.beatbox.ui.components.MusicVisualizer
+import com.blackstack.beatbox.ui.components.VisualizerState
 import com.blackstack.beatbox.Strings
 import com.blackstack.beatbox.ui.components.EmptyArtKind
 import com.blackstack.beatbox.ui.components.EmptyStateArt
@@ -247,8 +248,7 @@ internal fun HomeForYouSection(
     songs: List<AudioFile>,
     currentAudioId: Long?,
     isPlaying: Boolean,
-    visualizerLevel: Float,
-    visualizerWaveform: FloatArray,
+    visualizerState: VisualizerState,
     strings: Strings,
     onPlaySong: (AudioFile) -> Unit
 ) {
@@ -280,8 +280,7 @@ internal fun HomeForYouSection(
                         rank = index + 1,
                         isCurrent = song.id == currentAudioId,
                         isPlaying = isPlaying,
-                        visualizerLevel = visualizerLevel,
-                        visualizerWaveform = visualizerWaveform,
+                        visualizerState = visualizerState,
                         onClick = { onPlaySong(song) }
                     )
                 }
@@ -296,8 +295,7 @@ private fun HomeTopSongCard(
     rank: Int,
     isCurrent: Boolean,
     isPlaying: Boolean,
-    visualizerLevel: Float,
-    visualizerWaveform: FloatArray,
+    visualizerState: VisualizerState,
     onClick: () -> Unit
 ) {
     val interaction = remember { MutableInteractionSource() }
@@ -350,8 +348,7 @@ private fun HomeTopSongCard(
                 ) {
                     MusicVisualizer(
                         isPlaying = true,
-                        level = visualizerLevel,
-                        waveform = visualizerWaveform,
+                        state = visualizerState,
                         modifier = Modifier.height(18.dp)
                     )
                 }

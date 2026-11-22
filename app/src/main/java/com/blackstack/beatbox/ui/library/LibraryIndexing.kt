@@ -32,9 +32,28 @@ internal fun libraryLetter(title: String): Char {
     return normalized.firstOrNull()?.takeIf { it in 'A'..'Z' } ?: '#'
 }
 
+/** Sıralama sırasında öğe başına bir kez hesaplanan anahtarı taşır. */
+private class SortEntry<T>(val item: T, val key: String, val raw: String)
+
+/**
+ * [selector]'dan üretilen aksansız anahtara göre sıralar.
+ *
+ * Anahtar her öğe için bir kez hesaplanır. Daha önce `compareBy` içinde
+ * hesaplandığı için `Normalizer` ve regex her karşılaştırmada çalışıyordu
+ * (O(n log n) kez); binlerce şarkılı bir kitaplıkta sekme geçişleri bu yüzden
+ * yüzlerce milisaniye kilitlenebiliyordu.
+ */
+internal fun <T> sortedByLibraryKey(items: List<T>, selector: (T) -> String): List<T> {
+    if (items.size < 2) return items
+    return items
+        .map { item ->
+            val raw = selector(item)
+            SortEntry(item, librarySortKey(raw), raw)
+        }
+        .sortedWith(compareBy<SortEntry<T>> { it.key }.thenBy { it.raw })
+        .map { it.item }
+}
+
 /** Başlıkları aksan duyarsız biçimde A-Z sıralar. */
 internal fun sortedByTitle(songs: List<AudioFile>): List<AudioFile> =
-    songs.sortedWith(
-        compareBy<AudioFile> { librarySortKey(it.title) }
-            .thenBy { it.title }
-    )
+    sortedByLibraryKey(songs) { it.title }

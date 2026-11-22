@@ -31,6 +31,7 @@ import com.blackstack.beatbox.ui.components.BeatBoxOverlays
 import com.blackstack.beatbox.ui.components.BeatBoxScaffold
 import com.blackstack.beatbox.ui.components.BeatBoxSkeleton
 import com.blackstack.beatbox.ui.components.BeatBoxTabContent
+import com.blackstack.beatbox.ui.components.VisualizerState
 import com.blackstack.beatbox.ui.components.SplashScreen
 import com.blackstack.beatbox.ui.components.nextSongInQueue
 import com.blackstack.beatbox.ui.components.previousSongInQueue
@@ -56,8 +57,7 @@ fun BeatBoxApp(
     themeConfig: ThemeConfig,
     strings: Strings,
     currentLang: AppLanguage,
-    visualizerLevel: Float,
-    visualizerWaveform: FloatArray,
+    visualizerState: VisualizerState,
     onThemeConfigChange: (ThemeConfig) -> Unit,
     onLangChange: (AppLanguage) -> Unit
 ) {
@@ -234,8 +234,7 @@ fun BeatBoxApp(
                     speechLauncher = speechLauncher,
                     tempoViz = tempoViz,
                     isPlaying = isPlaying,
-                    visualizerLevel = visualizerLevel,
-                    visualizerWaveform = visualizerWaveform,
+                    visualizerState = visualizerState,
                     userProfile = userProfile,
                     avatarIcons = avatarIcons,
                     currentAudio = currentAudio,
@@ -277,8 +276,7 @@ fun BeatBoxApp(
                                 isPlaying = isPlaying,
                                 searchQuery = searchQuery,
                                 sortOption = sortOption,
-                                visualizerLevel = visualizerLevel,
-                                visualizerWaveform = visualizerWaveform,
+                                visualizerState = visualizerState,
                                 strings = strings,
                                 ctx = ctx,
                                 prefs = prefs,
@@ -329,8 +327,7 @@ fun BeatBoxApp(
             favoriteIds = favoriteIds,
             currentEQPreset = currentEQPreset,
             onEQPresetChange = { currentEQPreset = it },
-            visualizerLevel = visualizerLevel,
-            visualizerWaveform = visualizerWaveform,
+            visualizerState = visualizerState,
             heroSourceBounds = heroSourceBounds,
             onPlayPause = togglePlayPause,
             onNext = playNext,

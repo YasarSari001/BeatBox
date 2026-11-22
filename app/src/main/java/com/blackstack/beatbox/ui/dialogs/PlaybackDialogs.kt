@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.blackstack.beatbox.ui.components.EmptyArtKind
 import com.blackstack.beatbox.ui.components.EmptyStateArt
+import com.blackstack.beatbox.ui.components.VisualizerState
 import com.blackstack.beatbox.ui.components.buttonShadow
 import com.blackstack.beatbox.ui.components.cardShadow
 
@@ -60,7 +61,7 @@ import com.blackstack.beatbox.ui.components.cardShadow
 fun EQDialog(
     strings: Strings,
     currentEQPreset: EQPreset,
-    visualizerWaveform: FloatArray,
+    visualizerState: VisualizerState,
     onPresetSelected: (EQPreset) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -110,7 +111,7 @@ fun EQDialog(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.Bottom
                     ) {
-                        val waveform = visualizerWaveform
+                        val waveform = visualizerState.waveform
                         val barCount = if (waveform.isNotEmpty()) minOf(12, waveform.size) else 12
                         for (i in 0 until barCount) {
                             val heightFraction = if (waveform.isNotEmpty() && i < waveform.size) waveform[i].coerceIn(0.1f, 1f) else 0.2f

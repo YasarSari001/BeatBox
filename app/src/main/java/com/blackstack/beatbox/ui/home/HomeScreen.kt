@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.blackstack.beatbox.AudioFile
 import com.blackstack.beatbox.Playlist
+import com.blackstack.beatbox.ui.components.VisualizerState
 import com.blackstack.beatbox.Strings
 import com.blackstack.beatbox.groupSongsByArtist
 import com.blackstack.beatbox.ui.components.PullToRefresh
@@ -42,8 +43,7 @@ fun HomeScreen(
     progress: () -> Float,
     strings: Strings,
     ctx: Context,
-    visualizerLevel: Float,
-    visualizerWaveform: FloatArray,
+    visualizerState: VisualizerState,
     /** Compact top bar görünürlüğü değişikliklerinde çağrılır. */
     onCompactBarVisibleChange: ((Boolean) -> Unit)? = null,
     /** Aşağı çekerek kitaplığı yenile. */
@@ -146,8 +146,7 @@ fun HomeScreen(
                         songs = topSongs,
                         currentAudioId = currentAudioId,
                         isPlaying = isPlaying,
-                        visualizerLevel = visualizerLevel,
-                        visualizerWaveform = visualizerWaveform,
+                        visualizerState = visualizerState,
                         strings = strings,
                         onPlaySong = onPlaySong
                     )

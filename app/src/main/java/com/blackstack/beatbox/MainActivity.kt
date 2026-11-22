@@ -44,6 +44,8 @@ import kotlinx.coroutines.*
 import kotlin.math.sqrt
 import kotlin.math.abs
 import com.blackstack.beatbox.ui.components.AlbumArtCache
+import com.blackstack.beatbox.ui.components.VISUALIZER_BUCKETS
+import com.blackstack.beatbox.ui.components.VisualizerState
 import com.blackstack.beatbox.ui.BeatBoxApp
 import com.blackstack.beatbox.playback.MediaPlaybackService
 import com.blackstack.beatbox.playback.OnlineAudioManager
@@ -368,9 +370,12 @@ class MainActivity : ComponentActivity(), SensorEventListener {
 
     @Composable
     private fun BeatBoxRoot() {
-        var visualizerLevel by remember { mutableFloatStateOf(0f) }
-        var visualizerWaveform by remember { mutableStateOf(FloatArray(15) { 0f }) }
-        
+        // Visualizer verisi kararlı bir kapsayıcıda tutulur. Değerler her turda
+        // yalnızca çizen bileşenleri geçersiz kılar; daha önce `FloatArray`
+        // parametresi olarak tüm ağaca geçtiği için çalma sırasında bütün ekran
+        // saniyede sekiz kez yeniden compose ediliyordu.
+        val visualizerState = remember { VisualizerState() }
+
         // Optimized polling: Only polls when playing, saving CPU & eliminating background lag
         LaunchedEffect(isPlaying.value) {
             if (isPlaying.value) {
@@ -378,11 +383,10 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                     while (isActive && isPlaying.value) {
                         try {
                             val level = musicService?.getCurrentLevel() ?: 0f
-                            val waveform = musicService?.getCurrentWaveform() ?: FloatArray(15) { 0f }
-                            withContext(Dispatchers.Main) {
-                                visualizerLevel = level
-                                visualizerWaveform = waveform
-                            }
+                            val waveform = musicService?.getCurrentWaveform()
+                                ?: FloatArray(VISUALIZER_BUCKETS)
+                            // Snapshot durumu ana iş parçacığına geçmeden yazılır.
+                            visualizerState.update(level, waveform)
                         } catch (e: Exception) {
                             // Ignore errors silently
                         }
@@ -390,8 +394,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                     }
                 }
             } else {
-                visualizerLevel = 0f
-                visualizerWaveform = FloatArray(15) { 0f }
+                visualizerState.reset()
             }
         }
 
@@ -485,7 +488,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             }
         ) {
             Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                BeatBoxApp(this@MainActivity, themeConfig, s, lang, visualizerLevel, visualizerWaveform,
+                BeatBoxApp(this@MainActivity, themeConfig, s, lang, visualizerState,
                     { themeConfig = it; ThemePreferences.save(prefs, it) },
                     { lang = it; prefs.edit { putString("app_lang", it.name) } })
 

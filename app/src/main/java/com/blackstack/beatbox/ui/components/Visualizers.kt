@@ -125,13 +125,42 @@ fun EnhancedRealTimeVisualizer(
     }
 }
 
+/** MediaPlaybackService'in her turda ürettiği visualizer örnek sayısı. */
+const val VISUALIZER_BUCKETS = 15
+
+/**
+ * Visualizer verisinin kararlı kapsayıcısı.
+ *
+ * Veri daha önce ekranlar arasında `Float`/`FloatArray` parametresi olarak
+ * taşınıyordu. `FloatArray` kararsız sayıldığı için çalma sırasında saniyede
+ * sekiz kez tüm uygulama ağacı (kitaplık listesi, sekmeler, overlay'ler)
+ * yeniden compose ediliyordu. Bu nesnenin kimliği sabittir; güncellemeler
+ * yalnızca [level] ve [waveform] okuyan bileşenleri geçersiz kılar.
+ */
+@Stable
+class VisualizerState {
+    var level by mutableFloatStateOf(0f)
+        private set
+    var waveform by mutableStateOf(FloatArray(VISUALIZER_BUCKETS))
+        private set
+
+    fun update(level: Float, waveform: FloatArray) {
+        this.level = level
+        this.waveform = waveform
+    }
+
+    fun reset() {
+        level = 0f
+        waveform = FloatArray(VISUALIZER_BUCKETS)
+    }
+}
+
 @Composable
 fun MusicVisualizer(
     isPlaying: Boolean,
-    level: Float,
-    waveform: FloatArray,
+    state: VisualizerState,
     modifier: Modifier = Modifier
 ) {
-    // Real-time audio visualizer with actual waveform data
-    EnhancedRealTimeVisualizer(isPlaying, level, waveform, modifier)
+    // Değerler burada okunur: yalnızca bu küçük bileşen yeniden compose olur.
+    EnhancedRealTimeVisualizer(isPlaying, state.level, state.waveform, modifier)
 }
