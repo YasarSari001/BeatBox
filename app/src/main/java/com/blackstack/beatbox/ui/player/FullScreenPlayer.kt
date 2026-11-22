@@ -154,14 +154,20 @@ fun FullScreenPlayer(
             closeStarted = true
             if (validSource != null && !reducedMotion && morph.value > 0.98f) {
                 scope.launch {
-                    morph.animateTo(
-                        targetValue = 0f,
-                        animationSpec = tween(
-                            durationMillis = if (performanceMode) 200 else 300,
-                            easing = FastOutLinearInEasing
+                    // Animasyon yarıda kesilse de (ör. uygulama arka plana
+                    // alınınca coroutine iptal edilir) ekran kapanmalı; aksi
+                    // halde bayrak takılı kalır ve oynatıcı bir daha kapanmaz.
+                    try {
+                        morph.animateTo(
+                            targetValue = 0f,
+                            animationSpec = tween(
+                                durationMillis = if (performanceMode) 200 else 300,
+                                easing = FastOutLinearInEasing
+                            )
                         )
-                    )
-                    onCollapse()
+                    } finally {
+                        onCollapse()
+                    }
                 }
             } else {
                 onCollapse()
