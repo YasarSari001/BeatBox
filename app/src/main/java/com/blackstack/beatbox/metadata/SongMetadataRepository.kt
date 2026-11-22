@@ -1,9 +1,7 @@
 package com.blackstack.beatbox.metadata
-import android.content.ContentValues
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
-import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.util.Log
 import androidx.compose.runtime.mutableStateMapOf
@@ -24,8 +22,6 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.security.MessageDigest
 import java.util.Collections
-import org.jaudiotagger.audio.AudioFileIO
-import org.jaudiotagger.tag.FieldKey
 import com.blackstack.beatbox.AudioFile
 
 /**
@@ -66,11 +62,7 @@ object SongMetadataRepository {
      * sabit bir anahtar üretir.
      */
     fun cacheKey(audio: AudioFile): String {
-        val raw = if (audio.isOnline) {
-            "${audio.title}|${audio.duration}"
-        } else {
-            audio.uri.toString()
-        }
+        val raw = audio.uri.toString()
         return MessageDigest.getInstance("SHA-1")
             .digest(raw.toByteArray(Charsets.UTF_8))
             .joinToString("") { "%02x".format(it.toInt() and 0xFF) }
@@ -196,7 +188,7 @@ object SongMetadataRepository {
      * gelirse hemen, değilse tek bir arka plan isteğiyle döner.
      */
     suspend fun ensureArtwork(context: Context, audio: AudioFile): String? {
-        if (!isEnabled(context) || audio.isOnline) return null
+        if (!isEnabled(context)) return null
 
         audio.artworkPath?.let { path ->
             if (File(path).exists()) return path
@@ -289,71 +281,26 @@ object SongMetadataRepository {
     }
 
     /**
-     * Dosya adından başlık ve sanatçıyı çıkarıp doğrudan ses dosyasının
-     * etiketine (MP3 için ID3) yazar. Başarılıysa güncellenmiş [AudioFile]
-     * kopyasını döner.
+     * Dosya adından okunan başlık ve sanatçıyı yalnızca uygulama görünümü için
+     * uygular. Ses dosyasının etiketi ve MediaStore satırı değiştirilmez;
+     * dosyalar salt okunur kalır. Uygulamanın diske yazdığı tek çıktı, indirilen
+     * albüm kapağının önbelleğidir.
      *
-     * MediaStore taramasında URI `content://` olduğu için yazma iki yolla
-     * denenir:
-     * 1. MediaStore'un `DATA` sütunundan gerçek dosya yolu bulunursa doğrudan
-     *    dosyaya yazılır (Android 9 ve öncesinde WRITE_EXTERNAL_STORAGE,
-     *    Android 11+ için "Tüm dosyalara erişim" izniyle).
-     * 2. Yol yoksa/yazılamıyorsa içerik geçici bir dosyaya kopyalanır, etiket
-     *    yazılır ve `openOutputStream(uri, "rwt")` ile geri kopyalanır. Bu yol
-     *    yalnızca uygulamanın sahibi olduğu veya yazma izni verilmiş URI'lerde
-     *    çalışır; aksi halde yazma sessizce atlanır.
-     *
-     * Yazma başarısızsa null döner ve mevcut [AudioFile] değerleri korunur.
      * Dosya adı biçimi: "Sanatçı - Başlık.mp3" veya sadece "Başlık.mp3".
+     * Görünen değerler zaten aynıysa null döner.
      */
-    fun fixMetadataFromFilename(
-        audio: AudioFile,
-        context: Context,
-        knownPath: String? = null
-    ): AudioFile? {
-        if (audio.isOnline) return null
-
-        val path = knownPath?.takeIf { it.isNotBlank() } ?: queryDataPath(context, audio.uri)
-        val fileName = path?.let { File(it).name }
-            ?: queryDisplayName(context, audio.uri)
+    fun displayMetadataFor(audio: AudioFile, context: Context): AudioFile? {
+        val fileName = queryDisplayName(context, audio.uri)
             ?: if (audio.uri.scheme == "file") audio.uri.lastPathSegment else null
         val parsed = fileName
             ?.substringBeforeLast('.', fileName)
             ?.let(::parseFilenameMetadata)
-            ?: return null
 
-        // MediaStore zaten aynı değerleri taşıyorsa her taramada yeniden yazma.
-        if (!needsMetadataUpdate(audio.title, audio.artist, parsed)) return audio
+        val title = cleanDisplayTitle(parsed?.title ?: audio.title)
+        val artist = parsed?.artist ?: audio.artist
+        if (title == audio.title && artist == audio.artist) return null
 
-        if (!writeTags(context, audio.uri, path, parsed)) {
-            Log.w("SongMetadata", "Etiket yazılamadı: ${audio.uri}")
-            return null
-        }
-
-        // Bir sonraki tarama dosya adıyla aynı değerleri görsün diye MediaStore
-        // satırını da güncelle. Böylece yenileme sırasında eski başlık dönmez.
-        updateMediaStore(context, audio.uri, parsed)
-
-        return audio.copy(
-            title = parsed.title,
-            artist = parsed.artist ?: audio.artist
-        )
-    }
-
-    @Suppress("DEPRECATION")
-    private fun queryDataPath(context: Context, uri: Uri): String? {
-        if (uri.scheme != "content") return null
-        return runCatching {
-            context.contentResolver.query(
-                uri,
-                arrayOf(MediaStore.Audio.Media.DATA),
-                null,
-                null,
-                null
-            )?.use { cursor ->
-                if (cursor.moveToFirst()) cursor.getString(0) else null
-            }
-        }.getOrNull()
+        return audio.copy(title = title, artist = artist)
     }
 
     private fun queryDisplayName(context: Context, uri: Uri): String? {
@@ -369,107 +316,5 @@ object SongMetadataRepository {
                 if (cursor.moveToFirst()) cursor.getString(0) else null
             }
         }.getOrNull()
-    }
-
-    private fun writeTags(
-        context: Context,
-        uri: Uri,
-        knownPath: String?,
-        parsed: FilenameMetadata
-    ): Boolean {
-        val directFile = knownPath
-            ?.let(::File)
-            ?.takeIf { it.isFile && it.canWrite() }
-        if (directFile != null && writeTagsToFile(directFile, parsed)) return true
-
-        if (uri.scheme != "content") return false
-
-        // Scoped storage: yazma izni yoksa geçici kopya oluşturup boşa
-        // çalışmadan önce URI'nin gerçekten yazılabilir olduğunu doğrula.
-        if (!canWriteContentUri(context, uri)) {
-            Log.w(
-                "SongMetadata",
-                "İçerik URI'si yazılamıyor (tüm dosyalara erişim gerekli): $uri"
-            )
-            return false
-        }
-
-        // DATA yolu yoksa veya yazılamıyorsa geçici kopya üzerinden yaz.
-        val extension = knownPath
-            ?.substringAfterLast('.', "")
-            ?.takeIf { it.isNotBlank() }
-            ?: queryDisplayName(context, uri)
-                ?.substringAfterLast('.', "")
-                ?.takeIf { it.isNotBlank() }
-            ?: "mp3"
-        val temp = runCatching {
-            File.createTempFile("beatbox_tag_", ".$extension", context.cacheDir)
-        }.getOrNull() ?: return false
-
-        return try {
-            val copied = runCatching {
-                context.contentResolver.openInputStream(uri)?.use { input ->
-                    temp.outputStream().use { output -> input.copyTo(output) }
-                } != null
-            }.getOrDefault(false)
-            if (!copied) return false
-
-            if (!writeTagsToFile(temp, parsed)) return false
-
-            runCatching {
-                context.contentResolver.openOutputStream(uri, "rwt")?.use { output ->
-                    temp.inputStream().use { input -> input.copyTo(output) }
-                } != null
-            }.getOrDefault(false)
-        } catch (e: Exception) {
-            Log.w("SongMetadata", "İçerik URI'sine etiket yazılamadı: $uri", e)
-            false
-        } finally {
-            temp.delete()
-        }
-    }
-
-    /**
-     * İçerik URI'sinin yazılabilirliğini yan etkisiz biçimde sınar.
-     * `openOutputStream` önce dosyayı kesebileceği için burada yalnızca
-     * `openFileDescriptor(uri, "rw")` kullanılır.
-     */
-    private fun canWriteContentUri(context: Context, uri: Uri): Boolean =
-        runCatching {
-            context.contentResolver.openFileDescriptor(uri, "rw")?.use { true } ?: false
-        }.getOrDefault(false)
-
-    private fun writeTagsToFile(file: File, parsed: FilenameMetadata): Boolean = runCatching {
-        val taggedFile = AudioFileIO.read(file)
-        val tag = taggedFile.tagOrCreateAndSetDefault
-        val currentTitle = runCatching { tag.getFirst(FieldKey.TITLE) }.getOrNull()
-        val currentArtist = runCatching { tag.getFirst(FieldKey.ARTIST) }.getOrNull()
-
-        if (currentTitle == parsed.title &&
-            (parsed.artist == null || currentArtist == parsed.artist)
-        ) {
-            return@runCatching true
-        }
-
-        tag.setField(FieldKey.TITLE, parsed.title)
-        parsed.artist?.let { tag.setField(FieldKey.ARTIST, it) }
-        AudioFileIO.write(taggedFile)
-        true
-    }.getOrElse { e ->
-        Log.w("SongMetadata", "Etiket dosyaya yazılamadı: ${file.name}", e)
-        false
-    }
-
-    private fun updateMediaStore(context: Context, uri: Uri, parsed: FilenameMetadata) {
-        if (uri.scheme != "content") return
-        val values = ContentValues().apply {
-            put(MediaStore.Audio.Media.TITLE, parsed.title)
-            parsed.artist?.let { put(MediaStore.Audio.Media.ARTIST, it) }
-        }
-        runCatching {
-            context.contentResolver.update(uri, values, null, null)
-        }.onFailure {
-            Log.w("SongMetadata", "MediaStore satırı güncellenemedi: $uri", it)
-        }
     }
 }

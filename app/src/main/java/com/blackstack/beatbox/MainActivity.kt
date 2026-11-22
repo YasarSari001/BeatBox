@@ -48,7 +48,7 @@ import com.blackstack.beatbox.ui.components.VISUALIZER_BUCKETS
 import com.blackstack.beatbox.ui.components.VisualizerState
 import com.blackstack.beatbox.ui.BeatBoxApp
 import com.blackstack.beatbox.playback.MediaPlaybackService
-import com.blackstack.beatbox.playback.OnlineAudioManager
+import com.blackstack.beatbox.playback.PlaybackErrorState
 import com.blackstack.beatbox.i18n.appLanguageOf
 import com.blackstack.beatbox.playback.trimImageCaches
 import com.blackstack.beatbox.ui.components.UpdateDialog
@@ -110,9 +110,16 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             isPlaying.value = musicService?.isPlaying() == true
 
             musicService?.onSongComplete = { onSongComplete?.invoke() }
+            musicService?.onPlaybackError = { audio, message ->
+                runOnUiThread { PlaybackErrorState.report(audio.id, message) }
+            }
             musicService?.onPrevRequested = { uiActionPlayPrev?.invoke() }
             musicService?.onPlaybackStateChanged = { isPlaying.value = it }
-            musicService?.onAudioChanged = { currentAudio.value = it }
+            musicService?.onAudioChanged = {
+                currentAudio.value = it
+                // Şarkı gerçekten hazırlanıp çalmaya başladı: eski uyarı kalmasın.
+                PlaybackErrorState.clear()
+            }
 
             // RECORD_AUDIO izni - Visualizer icin gereklidir
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -213,6 +220,8 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         }
 
         prefs = getSharedPreferences("BeatBoxSettings", Context.MODE_PRIVATE)
+        // Eski sürümlerin bıraktığı çevrim içi parça kayıtları artık kullanılmıyor.
+        if (prefs.contains("online_tracks_v1")) prefs.edit { remove("online_tracks_v1") }
         if (prefs.getBoolean("keep_screen_on", false)) {
             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
@@ -509,7 +518,9 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         }
     }
 
-    fun playAudio(audio: AudioFile) { 
+    fun playAudio(audio: AudioFile) {
+        // Yeni parça denenirken önceki şarkının hata işareti kapakta kalmaz.
+        PlaybackErrorState.clear()
         android.util.Log.d("MainActivity", "playAudio called for: ${audio.title}")
         android.util.Log.d("MainActivity", "musicService is null: ${musicService == null}")
         android.util.Log.d("MainActivity", "serviceBound: $serviceBound")
@@ -526,11 +537,6 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     fun setEQPreset(preset: EQPreset) { musicService?.applyPreset(preset) }
     fun getCurrentEQPreset(): EQPreset = musicService?.currentPreset ?: EQPreset.NONE
     fun setPlaybackSpeed(speed: Float) { musicService?.setSpeed(speed) }
-    fun loadOnlineTracks(): List<AudioFile> = OnlineAudioManager.loadOnlineTracks(this)
-    fun saveOnlineTrack(title: String, artist: String, url: String, artworkUrl: String?, durationMs: Long = 0L): AudioFile =
-        OnlineAudioManager.saveOnlineTrack(this, title, artist, url, artworkUrl, durationMs)
-    fun downloadTrack(audioFile: AudioFile, onResult: (Boolean, String) -> Unit): Unit =
-        run { OnlineAudioManager.downloadTrack(this, audioFile, lifecycleScope, onResult) }
     fun toggleFavorite(audioId: Long) {
         val favs = getFavorites().toMutableSet()
         if (favs.contains(audioId.toString())) favs.remove(audioId.toString()) else favs.add(audioId.toString())
@@ -685,6 +691,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         // Clear service callbacks to avoid leaking the Activity
         try {
             musicService?.onSongComplete = null
+            musicService?.onPlaybackError = null
             musicService?.onPrevRequested = null
             musicService?.onPlaybackStateChanged = null
             musicService?.onAudioChanged = null

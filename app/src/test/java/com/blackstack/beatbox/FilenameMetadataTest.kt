@@ -3,6 +3,7 @@ package com.blackstack.beatbox
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import com.blackstack.beatbox.metadata.FilenameMetadata
+import com.blackstack.beatbox.metadata.cleanDisplayTitle
 import com.blackstack.beatbox.metadata.needsMetadataUpdate
 import com.blackstack.beatbox.metadata.parseFilenameMetadata
 
@@ -106,5 +107,22 @@ class FilenameMetadataTest : StringSpec({
             currentArtist = "Bilinmeyen",
             parsed = FilenameMetadata("Get Lucky", null)
         ) shouldBe false
+    }
+
+    "görünen başlıktan tanıtım etiketleri atılır" {
+        cleanDisplayTitle("Get Lucky (Official Video)") shouldBe "Get Lucky"
+        cleanDisplayTitle("Get Lucky [Official Audio]") shouldBe "Get Lucky"
+        cleanDisplayTitle("Get Lucky (Lyrics)") shouldBe "Get Lucky"
+        cleanDisplayTitle("Get Lucky - Official Video") shouldBe "Get Lucky"
+    }
+
+    "içerik belirten parantezler korunur" {
+        cleanDisplayTitle("Get Lucky (Live)") shouldBe "Get Lucky (Live)"
+        cleanDisplayTitle("Get Lucky (feat. Pharrell)") shouldBe "Get Lucky (feat. Pharrell)"
+        cleanDisplayTitle("Get Lucky (Remix)") shouldBe "Get Lucky (Remix)"
+    }
+
+    "temiz başlık değişmeden kalır" {
+        cleanDisplayTitle("Get Lucky") shouldBe "Get Lucky"
     }
 })

@@ -27,8 +27,8 @@ android {
         applicationId = "com.blackstack.beatbox"
         minSdk = 26
         targetSdk = 36
-        versionCode = 12
-        versionName = "3.9"
+        versionCode = 13
+        versionName = "3.9.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -126,7 +126,6 @@ dependencies {
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
-    implementation(libs.jaudiotagger)
 
     // Room Database
     implementation(libs.androidx.room.runtime)

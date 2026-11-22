@@ -24,8 +24,9 @@ import com.blackstack.beatbox.ui.components.loadAudioFilesAndFolders
  * anında yüklenir. Tam tarama yalnızca kullanıcı aşağı çekerek yenilediğinde,
  * klasör/süre ayarları değiştiğinde veya önbellek yoksa yapılır.
  *
- * Tarama hızlıdır (yalnızca MediaStore sorgusu). Dosya adından ID3 düzeltmesi
- * gösterimden sonra arka planda ayrı bir geçişte uygulanır.
+ * Tarama hızlıdır (yalnızca MediaStore sorgusu). Dosya adından okunan başlık ve
+ * sanatçı yalnızca görünümde, arka planda ayrı bir geçişte uygulanır; ses
+ * dosyasının etiketi ve MediaStore satırı hiçbir zaman değiştirilmez.
  */
 @Stable
 class LibraryState(
@@ -119,7 +120,7 @@ class LibraryState(
                     LibraryCache.save(context, enriched, scannedFolders, selected, minDuration)
                 }
 
-                startMetadataFix(enriched, scannedFolders, selected, minDuration)
+                startDisplayMetadataPass(enriched, scannedFolders, selected, minDuration)
                 enrichUnknownArtists()
             } finally {
                 isRefreshing = false
@@ -148,7 +149,7 @@ class LibraryState(
         }
     }
 
-    private fun startMetadataFix(
+    private fun startDisplayMetadataPass(
         scanned: List<AudioFile>,
         foldersSnapshot: List<String>,
         selectedSnapshot: Set<String>,
@@ -161,10 +162,11 @@ class LibraryState(
 
             for (song in scanned) {
                 if (!isActive) break
-                val fixed = SongMetadataRepository.fixMetadataFromFilename(song, context)
-                if (fixed != null && fixed != song) {
-                    updatedById[song.id] = fixed
-                    batch += fixed
+                // Yalnızca görünümü düzeltir; dosyaya yazmaz.
+                val display = SongMetadataRepository.displayMetadataFor(song, context)
+                if (display != null) {
+                    updatedById[song.id] = display
+                    batch += display
                 }
                 if (batch.size >= 25) {
                     applyBatch(batch)

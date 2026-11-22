@@ -46,7 +46,10 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 import com.blackstack.beatbox.metadata.ArtworkDecoder
 import com.blackstack.beatbox.AudioFile
+import com.blackstack.beatbox.Strings
+import com.blackstack.beatbox.i18n.appLanguageOf
 import com.blackstack.beatbox.metadata.SongMetadataRepository
+import com.blackstack.beatbox.playback.PlaybackErrorState
 
 @Composable fun AlbumArtImage(a: AudioFile, modifier: Modifier = Modifier, isHQ: Boolean = false) {
     val ctx = LocalContext.current
@@ -138,30 +141,80 @@ import com.blackstack.beatbox.metadata.SongMetadataRepository
         }
     }
     
-    bmp?.let { validBitmap ->
-        Box(modifier) {
+    Box(modifier) {
+        bmp?.let { validBitmap ->
             Image(
-                bitmap = validBitmap.asImageBitmap(), 
-                contentDescription = null, 
-                contentScale = ContentScale.Crop, 
+                bitmap = validBitmap.asImageBitmap(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
+        } ?: run {
+            // Use cached gradient background when no album art is available
+            val gradient = remember(a.id) { gradientForSong(a, ctx) }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(gradient),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Icon(Icons.Default.MusicNote, null, tint = Color.Gray.copy(alpha = 0.5f))
+                }
+            }
         }
-    } ?: run {
-        // Use cached gradient background when no album art is available
-        val gradient = remember(a.id) { gradientForSong(a, ctx) }
-        Box(
-            modifier = modifier.background(gradient), 
-            contentAlignment = Alignment.Center
-        ) {
-            if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    strokeWidth = 2.dp
+
+        // Oynatılamayan şarkı kapak üzerinde işaretlenir.
+        PlaybackFailureOverlay(a.id)
+    }
+}
+
+/**
+ * Kapak üzerinde oynatma hatası.
+ *
+ * Hata yalnızca görünümde gösterilir; şarkı listesine veya dosyaya yazılmaz.
+ * Küçük kapaklarda sadece ikon görünür, büyük kapakta kısa açıklama eklenir.
+ */
+@Composable
+private fun PlaybackFailureOverlay(audioId: Long) {
+    if (PlaybackErrorState.failureFor(audioId) == null) return
+
+    val ctx = LocalContext.current
+    val strings = remember(ctx) { Strings(appLanguageOf(ctx)) }
+
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.62f)),
+        contentAlignment = Alignment.Center
+    ) {
+        // Küçük kapaklarda yalnızca ikon sığar.
+        val compact = maxWidth < 96.dp
+        val iconSize = if (compact) 18.dp else 34.dp
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                Icons.Rounded.Warning,
+                contentDescription = strings.get("playback_failed"),
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(iconSize)
+            )
+            if (!compact) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = strings.get("playback_failed"),
+                    color = Color.White.copy(alpha = 0.92f),
+                    fontSize = 10.5.sp,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = 6.dp)
                 )
-            } else {
-                Icon(Icons.Default.MusicNote, null, tint = Color.Gray.copy(alpha = 0.5f))
             }
         }
     }

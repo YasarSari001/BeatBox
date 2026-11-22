@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -23,7 +22,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -41,7 +39,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -49,7 +51,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.boundsInParent
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -58,11 +59,9 @@ import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.blackstack.beatbox.ui.theme.BeatBoxMotion
-import kotlin.math.roundToInt
 
 /** Alt navigasyondaki tek bir sekme. */
 data class BeatBoxNavItem(
@@ -85,33 +84,34 @@ fun BeatBoxBottomBar(
     items: List<BeatBoxNavItem>,
     modifier: Modifier = Modifier
 ) {
-    val density = LocalDensity.current
     val primary = MaterialTheme.colorScheme.primary
     // Sekme sınırları: kayan pill bu ölçüler arasında ilerler.
     var itemBounds by remember { mutableStateOf<Map<Int, Rect>>(emptyMap()) }
     val targetBounds = itemBounds[selectedTab]
 
-    val pillLeft by animateFloatAsState(
+    // Pill değerleri yalnızca çizim aşamasında okunur; sekme geçişinde alt
+    // navigasyon yeniden compose edilmez, sadece pill yeniden çizilir.
+    val pillLeft = animateFloatAsState(
         targetValue = targetBounds?.left ?: 0f,
         animationSpec = BeatBoxMotion.Soft,
         label = "nav_pill_left"
     )
-    val pillTop by animateFloatAsState(
+    val pillTop = animateFloatAsState(
         targetValue = targetBounds?.top ?: 0f,
         animationSpec = BeatBoxMotion.Soft,
         label = "nav_pill_top"
     )
-    val pillWidth by animateFloatAsState(
+    val pillWidth = animateFloatAsState(
         targetValue = targetBounds?.width ?: 0f,
         animationSpec = BeatBoxMotion.Soft,
         label = "nav_pill_width"
     )
-    val pillHeight by animateFloatAsState(
+    val pillHeight = animateFloatAsState(
         targetValue = targetBounds?.height ?: 0f,
         animationSpec = BeatBoxMotion.Soft,
         label = "nav_pill_height"
     )
-    val pillAlpha by animateFloatAsState(
+    val pillAlpha = animateFloatAsState(
         targetValue = if (targetBounds != null) 1f else 0f,
         animationSpec = tween(durationMillis = BeatBoxMotion.Quick),
         label = "nav_pill_alpha"
@@ -142,23 +142,25 @@ fun BeatBoxBottomBar(
                 .fillMaxWidth()
                 .height(62.dp)
                 .padding(5.dp)
+                // Tek bir pill tüm sekmeler arasında kayar; her sekmede ayrı
+                // beliren soluk bir arka plan yerine tek sürekli gösterge.
+                // Çizim aşamasında çizildiği için kare başına recomposition yok.
+                .drawBehind {
+                    val alpha = pillAlpha.value
+                    if (alpha <= 0.01f) return@drawBehind
+                    val insetX = 2.dp.toPx()
+                    val insetY = 5.dp.toPx()
+                    val width = (pillWidth.value - insetX * 2f).coerceAtLeast(0f)
+                    val height = (pillHeight.value - insetY * 2f).coerceAtLeast(0f)
+                    if (width <= 0f || height <= 0f) return@drawBehind
+                    drawRoundRect(
+                        color = primary.copy(alpha = 0.17f * alpha),
+                        topLeft = Offset(pillLeft.value + insetX, pillTop.value + insetY),
+                        size = Size(width, height),
+                        cornerRadius = CornerRadius(21.dp.toPx())
+                    )
+                }
         ) {
-            // Tek bir pill tüm sekmeler arasında kayar; her sekmede ayrı
-            // beliren soluk bir arka plan yerine tek sürekli gösterge.
-            if (pillAlpha > 0.01f) {
-                Box(
-                    modifier = Modifier
-                        .offset { IntOffset(pillLeft.roundToInt(), pillTop.roundToInt()) }
-                        .size(
-                            with(density) { pillWidth.toDp() },
-                            with(density) { pillHeight.toDp() }
-                        )
-                        .padding(horizontal = 2.dp, vertical = 5.dp)
-                        .graphicsLayer { alpha = pillAlpha }
-                        .background(primary.copy(alpha = 0.17f), RoundedCornerShape(21.dp))
-                )
-            }
-
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -171,7 +173,10 @@ fun BeatBoxBottomBar(
                         item = item,
                         selected = selectedTab == index,
                         onSelect = { onTabSelected(index) },
-                        onBoundsChange = { rect -> itemBounds = itemBounds + (index to rect) },
+                        onBoundsChange = { rect ->
+                            // Aynı ölçü her layout'ta yeni map üretmesin.
+                            if (itemBounds[index] != rect) itemBounds = itemBounds + (index to rect)
+                        },
                         modifier = Modifier.weight(1f)
                     )
                 }

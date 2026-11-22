@@ -101,8 +101,6 @@ object LibraryCache {
         put("albumId", albumId)
         put("folderName", folderName)
         put("dateAdded", dateAdded)
-        put("isOnline", isOnline)
-        putNullable("artworkUrl", artworkUrl)
         putNullable("artworkPath", artworkPath)
         put("isExplicit", isExplicit)
         putNullable("albumArtist", albumArtist)
@@ -118,8 +116,6 @@ object LibraryCache {
         albumId = optLong("albumId"),
         folderName = optString("folderName", "Unknown"),
         dateAdded = optLong("dateAdded"),
-        isOnline = optBoolean("isOnline", false),
-        artworkUrl = optStringOrNull("artworkUrl"),
         artworkPath = optStringOrNull("artworkPath"),
         isExplicit = optBoolean("isExplicit", false),
         albumArtist = optStringOrNull("albumArtist"),

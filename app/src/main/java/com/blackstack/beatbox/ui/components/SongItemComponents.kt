@@ -72,8 +72,7 @@ import com.blackstack.beatbox.Strings
     onFavClick: () -> Unit,
     onDelete: () -> Unit,
     onClick: () -> Unit,
-    onShowArtistSongs: () -> Unit = {},
-    onDownload: () -> Unit = {}
+    onShowArtistSongs: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     
@@ -258,24 +257,6 @@ import com.blackstack.beatbox.Strings
                             )
                         }
                     )
-                    if (a.isOnline) {
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    strings.get("download"),
-                                    fontWeight = FontWeight.Medium
-                                )
-                            },
-                            onClick = { onDownload(); showMenu = false },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Rounded.Download,
-                                    null,
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        )
-                    }
                     DropdownMenuItem(
                         text = { 
                             Text(

@@ -6,6 +6,13 @@ package com.blackstack.beatbox.i18n
  * ayrı tutulur ve `Strings` sınıfında ana tabloyla birleştirilir.
  */
 internal val extraTranslations: Map<String, Map<String, String>> = mapOf(
+    "playback_failed" to mapOf(
+        "en" to "Can't play this song", "tr" to "Bu şarkı oynatılamıyor",
+        "es" to "No se puede reproducir", "fr" to "Lecture impossible",
+        "de" to "Titel lässt sich nicht abspielen", "it" to "Impossibile riprodurre",
+        "pt" to "Não é possível reproduzir", "ru" to "Не удаётся воспроизвести",
+        "ja" to "再生できません", "zh" to "无法播放", "ar" to "تعذر التشغيل", "ko" to "재생할 수 없습니다"
+    ),
     "register" to mapOf(
         "en" to "Sign Up", "tr" to "Kayıt Ol", "es" to "Registrarse", "fr" to "S'inscrire",
         "de" to "Registrieren", "it" to "Registrati", "pt" to "Cadastrar",
@@ -325,11 +332,6 @@ internal val extraTranslations: Map<String, Map<String, String>> = mapOf(
         "fr" to "Commencer à écouter", "de" to "Jetzt hören", "it" to "Inizia ad ascoltare",
         "pt" to "Começar a ouvir", "ru" to "Начать слушать", "ja" to "聴き始める",
         "zh" to "开始聆听", "ar" to "ابدأ الاستماع", "ko" to "듣기 시작"
-    ),
-    "download" to mapOf(
-        "en" to "Download", "tr" to "İndir", "es" to "Descargar", "fr" to "Télécharger",
-        "de" to "Herunterladen", "it" to "Scarica", "pt" to "Baixar", "ru" to "Скачать",
-        "ja" to "ダウンロード", "zh" to "下载", "ar" to "تنزيل", "ko" to "다운로드"
     ),
     "folders_selected" to mapOf(
         "en" to "%d folders selected", "tr" to "%d klasör seçili",
@@ -750,20 +752,6 @@ internal val extraTranslations: Map<String, Map<String, String>> = mapOf(
         "pt" to "Concedido", "ru" to "Разрешено", "ja" to "許可済み",
         "zh" to "已授予", "ar" to "تم المنح", "ko" to "허용됨"
     ),
-    "download_completed" to mapOf(
-        "en" to "%s downloaded", "tr" to "%s indirildi", "es" to "%s descargado",
-        "fr" to "%s téléchargé", "de" to "%s heruntergeladen", "it" to "%s scaricato",
-        "pt" to "%s baixado", "ru" to "%s загружено", "ja" to "%s をダウンロードしました",
-        "zh" to "%s 已下载", "ar" to "تم تنزيل %s", "ko" to "%s 다운로드 완료"
-    ),
-    "download_failed" to mapOf(
-        "en" to "Download failed: %s", "tr" to "İndirme başarısız: %s",
-        "es" to "Error al descargar: %s", "fr" to "Échec du téléchargement : %s",
-        "de" to "Download fehlgeschlagen: %s", "it" to "Download non riuscito: %s",
-        "pt" to "Falha no download: %s", "ru" to "Ошибка загрузки: %s",
-        "ja" to "ダウンロードに失敗しました: %s", "zh" to "下载失败：%s",
-        "ar" to "فشل التنزيل: %s", "ko" to "다운로드 실패: %s"
-    ),
     "profile" to mapOf(
         "en" to "Profile", "tr" to "Profil", "es" to "Perfil",
         "fr" to "Profil", "de" to "Profil", "it" to "Profilo",
@@ -777,20 +765,6 @@ internal val extraTranslations: Map<String, Map<String, String>> = mapOf(
         "pt" to "BeatBox VIP Premium 🌟", "ru" to "BeatBox VIP Premium 🌟",
         "ja" to "BeatBox VIP Premium 🌟", "zh" to "BeatBox VIP Premium 🌟",
         "ar" to "BeatBox VIP Premium 🌟", "ko" to "BeatBox VIP Premium 🌟"
-    ),
-    "download_dir_error" to mapOf(
-        "en" to "Music folder could not be created",
-        "tr" to "Müzik klasörü oluşturulamadı",
-        "es" to "No se pudo crear la carpeta de música",
-        "fr" to "Impossible de créer le dossier de musique",
-        "de" to "Musikordner konnte nicht erstellt werden",
-        "it" to "Impossibile creare la cartella musicale",
-        "pt" to "Não foi possível criar a pasta de música",
-        "ru" to "Не удалось создать папку музыки",
-        "ja" to "音楽フォルダを作成できませんでした",
-        "zh" to "无法创建音乐文件夹",
-        "ar" to "تعذر إنشاء مجلد الموسيقى",
-        "ko" to "음악 폴더를 만들 수 없습니다"
     ),
     "speed" to mapOf(
         "en" to "Playback speed", "tr" to "Oynatma hızı", "es" to "Velocidad de reproducción",

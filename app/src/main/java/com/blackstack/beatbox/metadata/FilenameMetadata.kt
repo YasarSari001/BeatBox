@@ -60,8 +60,9 @@ fun parseFilenameMetadata(rawName: String): FilenameMetadata? {
 /**
  * ID3 etiketinin yeniden yazılması gerekip gerekmediğini söyler.
  *
- * MediaStore satırı dosya adıyla aynı değerleri taşıyorsa yazma atlanır; böylece
- * her yenilemede yüzlerce dosya yeniden yazılmaz.
+ * Uygulama artık etiket yazmadığı için bu karşılaştırma yalnızca başlık ve
+ * sanatçının dosya adıyla aynı olup olmadığını anlatır; görünüm katmanı
+ * gereksiz kopya üretmemek için kullanabilir.
  */
 fun needsMetadataUpdate(
     currentTitle: String,
@@ -71,4 +72,56 @@ fun needsMetadataUpdate(
     if (currentTitle != parsed.title) return true
     val artist = parsed.artist ?: return false
     return currentArtist != artist
+}
+
+/** Parantez, köşeli parantez veya süslü parantez içindeki gruplar. */
+private val bracketGroup = Regex("""[\(\[\{]([^\)\]\}]*)[\)\]\}]""")
+
+/** Başlığın sonunda kalan "- Official Video" gibi kuyruklar. */
+private val noiseTail = Regex(
+    """(?i)\s*[-–—|/]\s*((official\s+)?(music\s+)?(video|audio|lyric[s]?|visualizer)|official)\s*$"""
+)
+
+private val repeatedSpace = Regex("""\s{2,}""")
+
+/** Yalnızca dağıtım etiketi taşıyan parantez gruplarını tanımak için. */
+private val distributionTokens = setOf(
+    "official", "audio", "video", "music", "lyric", "lyrics", "visualizer",
+    "mv", "m", "v", "hd", "hq", "4k", "8k"
+)
+
+private fun isDistributionTag(inner: String): Boolean {
+    val words = inner.lowercase()
+        .replace(".", " ")
+        .split(' ', '/', '&')
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+    return words.isNotEmpty() && words.all { it in distributionTokens }
+}
+
+/**
+ * Görünen başlığı dağıtım etiketlerinden arındırır.
+ *
+ * "(Official Video)", "[Official Audio]", "(Lyrics)", "(Visualizer)" gibi
+ * yalnızca tanıtım amacı taşıyan parantez grupları ve sondaki "Official Video"
+ * kuyrukları atılır. Sanatçı ve "(Live)", "(Remix)", "(feat. ...)" gibi içerik
+ * belirten gruplar korunur.
+ *
+ * Bu yalnızca uygulama görünümünde kullanılır; dosya etiketi değiştirilmez.
+ */
+fun cleanDisplayTitle(raw: String): String {
+    if (raw.isBlank()) return raw
+
+    var title = bracketGroup.replace(raw) { match ->
+        if (isDistributionTag(match.groupValues[1])) " " else match.value
+    }
+    // "Official Video | Official Audio" gibi çoklu kuyruklar için iki tur.
+    repeat(2) { title = title.replace(noiseTail, "") }
+
+    title = title.replace(repeatedSpace, " ").trim()
+    while (title.isNotEmpty() && title.last() in " -\u2013\u2014|/_") {
+        title = title.dropLast(1).trim()
+    }
+
+    return title.ifBlank { raw.trim() }
 }

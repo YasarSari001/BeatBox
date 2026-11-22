@@ -54,8 +54,6 @@ data class AudioFile(
     val albumId: Long,
     val folderName: String,
     val dateAdded: Long,
-    val isOnline: Boolean = false,
-    val artworkUrl: String? = null,
     /** Çevrim içi eşleşmeden indirilen yerel kapak dosyası. */
     val artworkPath: String? = null,
     val isExplicit: Boolean = false,

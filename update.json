@@ -1,6 +1,6 @@
 {
-  "versionCode": 12,
-  "versionName": "3.9",
+  "versionCode": 13,
+  "versionName": "3.9.1",
   "apkUrl": "https://github.com/YasarSari001/BeatBox/releases/latest/download/BeatBox.apk",
-  "changelog": "BeatBox 3.9\n• Ana menülerde gezinirken ve kaydırırken yaşanan kasma azaltıldı\n• Visualizer verisi artık tüm uygulamayı değil, yalnızca çizildiği bileşeni yeniliyor\n• Kütüphane sıralaması aksansız anahtarı öğe başına bir kez hesaplıyor; sekme geçişleri belirgin biçimde hızlandı\n• Ana sayfa hero kartının ilerleme çubuğu artık kare başına kartı yeniden çizmiyor\n• Oynatıcı açılırken kapak morph'u yalnızca geçiş katmanını yeniden compose ediyor\n• Son eklenenler: waveform üzerinde zaman balonu ve aşağı sürükleme lastik bandı korunuyor"
+  "changelog": "BeatBox 3.9.1\n• Oynatılamayan şarkılar artık sessizce atlanmıyor; kapak üzerinde uyarı gösteriliyor\n• Şarkı adı ve sanatçı düzeltmeleri dosyaya yazılmıyor, yalnızca uygulamada gösteriliyor; \"(Official Video)\" gibi dağıtım etiketleri gizleniyor\n• Çevrim içi müzik altyapısı ve indirme menüsü kaldırıldı; eski sürümlerin bıraktığı çevrim içi kayıtlar açılışta temizleniyor\n• Alt menü göstergesi ve arka plan hareketleri kare başına daha az yeniden çizim yapıyor"
 }

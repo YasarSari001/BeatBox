@@ -5,7 +5,6 @@ import io.kotest.matchers.shouldBe
 import java.io.EOFException
 import java.io.IOException
 import com.blackstack.beatbox.playback.causeChain
-import com.blackstack.beatbox.playback.playbackErrorMessages
 
 /**
  * Unit tests for the playback error helpers.
@@ -24,32 +23,5 @@ class PlaybackErrorsTest : StringSpec({
         val error = IllegalStateException("playback failed")
 
         error.causeChain() shouldBe listOf(error)
-    }
-
-    "offline warning replaces provider errors" {
-        playbackErrorMessages(
-            isOnline = false,
-            offlineMessage = "İnternet bağlantısı yok",
-            guidance = null,
-            rawErrorMessages = listOf("Şarkı bulunamadı"),
-        ) shouldBe listOf("İnternet bağlantısı yok")
-    }
-
-    "online messages keep guidance and remove duplicates" {
-        playbackErrorMessages(
-            isOnline = true,
-            offlineMessage = "İnternet bağlantısı yok",
-            guidance = "Tekrar deneyin",
-            rawErrorMessages = listOf("Sunucu yanıt vermedi", "Tekrar deneyin"),
-        ) shouldBe listOf("Tekrar deneyin", "Sunucu yanıt vermedi")
-    }
-
-    "no guidance and no errors produce an empty list" {
-        playbackErrorMessages(
-            isOnline = true,
-            offlineMessage = "İnternet bağlantısı yok",
-            guidance = null,
-            rawErrorMessages = emptyList(),
-        ) shouldBe emptyList()
     }
 })

@@ -26,6 +26,6 @@ yükümlülüklerini yerine getirmelisiniz.
 ## Diğer bağımlılıklar
 
 Projede kullanılan üçüncü taraf kütüphaneler (AndroidX, Jetpack Compose,
-Firebase, Retrofit, OkHttp, Gson, Room, JAudioTagger, Kotest, MockK vb.)
+Firebase, Retrofit, OkHttp, Gson, Room, Kotest, MockK vb.)
 kendi lisansları altında dağıtılır. Ayrıntılar ilgili kütüphanelerin
 lisans dosyalarında yer alır.

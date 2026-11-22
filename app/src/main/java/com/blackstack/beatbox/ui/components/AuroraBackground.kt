@@ -1,11 +1,5 @@
 package com.blackstack.beatbox.ui.components
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -17,7 +11,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -30,6 +26,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import com.blackstack.beatbox.ui.theme.LocalReducedMotion
 import com.blackstack.beatbox.ui.theme.rememberPerformanceMode
+import kotlin.math.abs
 import kotlin.random.Random
 
 /**
@@ -65,19 +62,29 @@ fun AuroraBackground(
         )
     }
 
+    // Işık sürüklenmesi 26 saniyelik, neredeyse fark edilmeyen bir harekettir;
+    // her karede katman güncellemek boşa kare harcar. Değer ~10 fps'te
+    // ilerletilir, hareket aynı kalır ama boştaki çizim maliyeti düşer.
     val drift: State<Float> = if (reducedMotion || performanceMode) {
         remember { mutableStateOf(0f) }
     } else {
-        val transition = rememberInfiniteTransition(label = "aurora_drift")
-        transition.animateFloat(
-            initialValue = -1f,
-            targetValue = 1f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(26_000, easing = LinearEasing),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "aurora_drift_value"
-        )
+        produceState(initialValue = -1f, reducedMotion, performanceMode) {
+            val periodNanos = 26_000_000_000L
+            var startNanos = -1L
+            while (true) {
+                withFrameNanos { frameTimeNanos ->
+                    if (startNanos < 0L) startNanos = frameTimeNanos
+                    val elapsed = (frameTimeNanos - startNanos) % (periodNanos * 2)
+                    val phase = if (elapsed < periodNanos) {
+                        elapsed.toFloat() / periodNanos
+                    } else {
+                        2f - elapsed.toFloat() / periodNanos
+                    }
+                    val next = -1f + 2f * phase
+                    if (abs(next - value) >= 0.008f) value = next
+                }
+            }
+        }
     }
 
     BoxWithConstraints(
@@ -164,6 +171,9 @@ fun AuroraBackground(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    // Kendi katmanına alınır: 1100 nokta bir kez raster edilir,
+                    // üstteki içerik yeniden çizilse bile tekrar çizilmez.
+                    .graphicsLayer()
                     .drawWithCache {
                         val points = grain.map { Offset(it.x * size.width, it.y * size.height) }
                         onDrawBehind {

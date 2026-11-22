@@ -94,6 +94,14 @@ class MediaPlaybackService : Service(), AudioManager.OnAudioFocusChangeListener 
 
     var onPlaybackStateChanged: ((Boolean) -> Unit)? = null
     var onSongComplete: (() -> Unit)? = null
+    /**
+     * Oynatılamayan şarkıyı bildirir. Hata görünümde, şarkının kapağı üzerinde
+     * gösterilir; otomatik olarak sonraki parçaya geçilmez.
+     */
+    var onPlaybackError: ((AudioFile, String) -> Unit)? = null
+
+    /** Aynı oynatıcı için hatayı bir kez bildirmek üzere işaretlenir. */
+    private var reportedErrorPlayer: MediaPlayer? = null
     var onPrevRequested: (() -> Unit)? = null
     var onAudioChanged: ((AudioFile?) -> Unit)? = null
 
@@ -426,16 +434,6 @@ class MediaPlaybackService : Service(), AudioManager.OnAudioFocusChangeListener 
                         } else {
                             mp.start()
                         }
-                        
-                        // Update online audio duration with actual MediaPlayer duration
-                        if (audio.isOnline) {
-                            val mpDur = try { mp.duration.toLong() } catch (_: Exception) { 0L }
-                            if (mpDur > 0L && mpDur != audio.duration) {
-                                val updated = audio.copy(duration = mpDur)
-                                currentAudio = updated
-                                onAudioChanged?.invoke(updated)
-                            }
-                        }
 
                         // Setup after preparation
                         setupEQ()
@@ -460,21 +458,24 @@ class MediaPlaybackService : Service(), AudioManager.OnAudioFocusChangeListener 
                         }
                     }
                     
-                    // Set error listener
-                    setOnErrorListener { _, what, extra ->
-                        android.util.Log.e("BeatBox", "MediaPlayer error: what=$what, extra=$extra")
-                        
-                        // If error -38, try to recover by skipping to next
-                        if (what == MediaPlayer.MEDIA_ERROR_NOT_VALID_FOR_PROGRESSIVE_PLAYBACK || what == -38) {
-                            android.util.Log.e("BeatBox", "Error -38 detected, attempting recovery...")
-                            serviceScope.launch(Dispatchers.Main) {
-                                delay(100) // Small delay
-                                onSongComplete?.invoke() // Skip to next
-                            }
-                            return@setOnErrorListener true // Error handled
+                    // Hata sessizce atlanmaz: şarkı kapak üzerinde işaretlenir.
+                    // Otomatik sonraki parçaya geçiş kaldırıldı; tek bir hata
+                    // art arda birkaç şarkı atlanmış gibi görünmesine yol açıyordu.
+                    //
+                    // Yalnızca bu oynatıcıya ait hata bildirilir. Şarkı
+                    // değiştirilirken release edilen eski oynatıcının hatası
+                    // yeni (sorunsuz çalan) şarkıya yazılmamalı.
+                    setOnErrorListener { erroredPlayer, what, extra ->
+                        val isActivePlayer = mediaPlayer === erroredPlayer
+                        android.util.Log.e(
+                            "BeatBox",
+                            "MediaPlayer error: what=$what, extra=$extra, active=$isActivePlayer, track=${audio.title}"
+                        )
+                        if (isActivePlayer && reportedErrorPlayer !== erroredPlayer) {
+                            reportedErrorPlayer = erroredPlayer
+                            onPlaybackError?.invoke(audio, "what=$what, extra=$extra")
                         }
-                        
-                        false // Let system handle other errors
+                        true // Hata sahiplenildi; tamamlanma geri çağrısı tetiklenmez.
                     }
                     
                     prepareAsync() // Non-blocking preparation
@@ -512,9 +513,10 @@ class MediaPlaybackService : Service(), AudioManager.OnAudioFocusChangeListener 
                     e.printStackTrace()
                 }
             }
-        } catch (e: Exception) { 
+        } catch (e: Exception) {
             android.util.Log.e("BeatBox", "Play error", e)
-            e.printStackTrace() 
+            // Çalınmaya çalışılan parça gerçekten açılamadı.
+            onPlaybackError?.invoke(audio, e.message ?: e.javaClass.simpleName)
         }
     }
 
