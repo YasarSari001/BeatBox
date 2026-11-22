@@ -18,6 +18,7 @@ import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -126,8 +127,8 @@ fun BeatBoxApp(
     var selectedTab by remember { mutableIntStateOf(0) } // 0=Home, 1=Playlists, 2=Library
     // Mini oynatıcı kapağının görünürken ölçülen konumu. Oynatıcı açılırken
     // bu değer dondurulur; böylece morph her zaman doğru noktadan başlar.
-    var miniArtBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
-    var heroSourceBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    var miniArtBounds by remember { mutableStateOf<Rect?>(null) }
+    var heroSourceBounds by remember { mutableStateOf<Rect?>(null) }
     LaunchedEffect(overlays.showPlayer) {
         if (!overlays.showPlayer) heroSourceBounds = null
     }

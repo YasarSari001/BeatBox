@@ -10,7 +10,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.blackstack.beatbox.ui.theme.rememberPerformanceMode
@@ -72,25 +71,22 @@ fun EnhancedRealTimeVisualizer(
         label = "tempo_phase"
     )
 
+    // Bu noktadan sonra çalma her zaman etkindir (bkz. yukarıdaki erken çıkış).
     val barCount = 14
-    val hasRealData = isPlaying && waveform.any { it > 0.01f }
+    val hasRealData = waveform.any { it > 0.01f }
 
     Row(
-        modifier = modifier.graphicsLayer { },
+        modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
         repeat(barCount) { index ->
-            val targetAmplitude = if (isPlaying) {
-                if (hasRealData && index < waveform.size) {
-                    (waveform[index] * 2.8f).coerceIn(0f, 1f)
-                } else {
-                    val sineVal = sin(fallbackPhase + index * 0.45f)
-                    val baseAmp = (sineVal + 1f) / 2f
-                    (0.25f + baseAmp * 0.7f).coerceIn(0.15f, 1f)
-                }
+            val targetAmplitude = if (hasRealData && index < waveform.size) {
+                (waveform[index] * 2.8f).coerceIn(0f, 1f)
             } else {
-                0.05f
+                val sineVal = sin(fallbackPhase + index * 0.45f)
+                val baseAmp = (sineVal + 1f) / 2f
+                (0.25f + baseAmp * 0.7f).coerceIn(0.15f, 1f)
             }
             
             val amplitude by animateFloatAsState(
@@ -106,24 +102,14 @@ fun EnhancedRealTimeVisualizer(
             val baseHeight = 6f
             val maxHeight = (38f - centerDistance * 14f).coerceAtLeast(20f)
             
-            val height = if (isPlaying) {
-                (baseHeight + amplitude * (maxHeight - baseHeight)).dp
-            } else {
-                8.dp
-            }
-            
-            val alpha = if (isPlaying) {
-                (0.65f + amplitude * 0.35f).coerceIn(0.65f, 1f)
-            } else {
-                0.35f
-            }
+            val height = (baseHeight + amplitude * (maxHeight - baseHeight)).dp
+            val alpha = (0.65f + amplitude * 0.35f).coerceIn(0.65f, 1f)
             
             Box(
                 Modifier
                     .padding(horizontal = 1.5.dp)
                     .width(4.5.dp)
                     .height(height)
-                    .graphicsLayer { }
                     .background(
                         Brush.verticalGradient(
                             listOf(

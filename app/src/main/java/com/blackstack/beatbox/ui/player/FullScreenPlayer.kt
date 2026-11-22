@@ -125,15 +125,13 @@ fun FullScreenPlayer(
     // Ölçüsü alınamamış veya sıfır kalmış bir kaynak kullanılmaz; aksi halde
     // kapak ekranın sol üst köşesinden büyüyerek gelirdi.
     val validSource = heroSourceBounds?.takeIf { it.width > 1f && it.height > 1f }
-    val hasHeroSource = validSource != null
-    val morph = remember { Animatable(if (hasHeroSource) 0f else 1f) }
+    val morph = remember { Animatable(if (validSource == null) 1f else 0f) }
     var artBounds by remember { mutableStateOf<Rect?>(null) }
-    var closing by remember { mutableStateOf(false) }
-    var closeHandled by remember { mutableStateOf(false) }
+    var closeStarted by remember { mutableStateOf(false) }
 
     LaunchedEffect(artBounds) {
         val target = artBounds
-        if (hasHeroSource && target != null && morph.value < 1f && !closing) {
+        if (validSource != null && target != null && morph.value < 1f && !closeStarted) {
             if (reducedMotion) {
                 morph.snapTo(1f)
             } else {
@@ -148,36 +146,31 @@ fun FullScreenPlayer(
         }
     }
 
-    // Kapatma tek seferliktir: yarım kalan morph ikinci bir dokunuşla veya
-    // geri tuşuyla yeniden başlatılmaz.
-    val finishClose: () -> Unit = {
-        if (!closeHandled) {
-            closeHandled = true
-            onCollapse()
-        }
-    }
-
-    // Kapatma: kapak önce mini oynatıcıdaki yerine küçülür, sonra ekran kapanır.
-    val requestCollapse: () -> Unit = {
-        if (!closing && !closeHandled && hasHeroSource && !reducedMotion && morph.value > 0.98f) {
-            closing = true
-            scope.launch {
-                morph.animateTo(
-                    targetValue = 0f,
-                    animationSpec = tween(
-                        durationMillis = if (performanceMode) 200 else 300,
-                        easing = FastOutLinearInEasing
+    // Kapatma tek seferliktir: üst çubuk, geri tuşu ve aşağı sürükleme aynı
+    // yoldan geçer; yarım kalan morph ikinci kez tetiklenmez. Kapak önce mini
+    // oynatıcıdaki yerine küçülür, sonra ekran kapanır.
+    val closePlayer: () -> Unit = {
+        if (!closeStarted) {
+            closeStarted = true
+            if (validSource != null && !reducedMotion && morph.value > 0.98f) {
+                scope.launch {
+                    morph.animateTo(
+                        targetValue = 0f,
+                        animationSpec = tween(
+                            durationMillis = if (performanceMode) 200 else 300,
+                            easing = FastOutLinearInEasing
+                        )
                     )
-                )
-                finishClose()
+                    onCollapse()
+                }
+            } else {
+                onCollapse()
             }
-        } else {
-            finishClose()
         }
     }
 
     // Geri tuşu da ekranın kendi kapanış animasyonunu kullanır.
-    BackHandler { requestCollapse() }
+    BackHandler { closePlayer() }
 
     val audioManager = remember(context) {
         context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
@@ -279,7 +272,7 @@ fun FullScreenPlayer(
         ) {
             PlayerTopBar(
                 strings = strings,
-                onCollapse = requestCollapse,
+                onCollapse = closePlayer,
                 onOpenEQ = onOpenEQ,
                 moreMenu = {
                     Box {
@@ -410,7 +403,7 @@ fun FullScreenPlayer(
                             onBoundsChange = { rect -> artBounds = rect },
                             onNext = onNext,
                             onPrev = onPrev,
-                            onCollapse = requestCollapse
+                            onCollapse = closePlayer
                         )
                     }
                 }
@@ -439,7 +432,6 @@ fun FullScreenPlayer(
             val trackDuration = a.duration.toFloat().takeIf { it > 0f } ?: 1f
             WaveformSeekBar(
                 progress = (pos / trackDuration).coerceIn(0f, 1f),
-                durationMs = a.duration,
                 audioKey = a.id,
                 isPlaying = isPlaying,
                 liveWaveform = visualizerWaveform,

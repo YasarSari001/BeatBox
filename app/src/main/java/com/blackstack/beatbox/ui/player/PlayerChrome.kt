@@ -109,7 +109,7 @@ internal fun PlayerBackdrop(audio: AudioFile, modifier: Modifier = Modifier) {
     // Tam ekran blur en pahalı efekt; performans modunda ve eski cihazlarda
     // atlanır, yerine yarı saydam kapak dokusu kullanılır.
     val performanceMode = rememberPerformanceMode()
-    val blurSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !performanceMode
+    val useBlur = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !performanceMode
     var bitmap by remember(audio.id) { mutableStateOf(AlbumArtCache.bitmapCache.get(audio.id)) }
 
     LaunchedEffect(audio.id) {
@@ -130,11 +130,11 @@ internal fun PlayerBackdrop(audio: AudioFile, modifier: Modifier = Modifier) {
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {
-                        scaleX = if (blurSupported) 1.2f else 1f
-                        scaleY = if (blurSupported) 1.2f else 1f
-                        alpha = if (blurSupported) 0.64f else 0.18f
+                        scaleX = if (useBlur) 1.2f else 1f
+                        scaleY = if (useBlur) 1.2f else 1f
+                        alpha = if (useBlur) 0.64f else 0.18f
                     }
-                    .then(if (blurSupported) Modifier.blur(90.dp) else Modifier)
+                    .then(if (useBlur) Modifier.blur(90.dp) else Modifier)
             )
         }
         Box(

@@ -40,7 +40,6 @@ import kotlin.math.sin
 @Composable
 fun WaveformSeekBar(
     progress: Float,
-    durationMs: Long,
     audioKey: Long,
     isPlaying: Boolean,
     liveWaveform: FloatArray,
@@ -82,7 +81,7 @@ fun WaveformSeekBar(
                 this.contentDescription = contentDescription
                 progressBarRangeInfo = ProgressBarRangeInfo(shown, 0f..1f)
             }
-            .pointerInput(audioKey, durationMs) {
+            .pointerInput(audioKey) {
                 awaitEachGesture {
                     val down = awaitFirstDown()
                     var fraction = (down.position.x / size.width).coerceIn(0f, 1f)
