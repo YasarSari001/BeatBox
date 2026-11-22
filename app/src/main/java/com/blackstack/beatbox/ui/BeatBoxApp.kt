@@ -124,6 +124,9 @@ fun BeatBoxApp(
 
     var playlists by remember { mutableStateOf(player.loadPlaylists()) }
     var selectedTab by remember { mutableIntStateOf(0) } // 0=Home, 1=Playlists, 2=Library
+    // Mini oynatıcı kapağının son bilinen konumu; tam ekran oynatıcı açılırken
+    // kapağın büyüyerek gelmesi (hero morph) için kullanılır.
+    var miniArtBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
     var currentPlaylist by remember { mutableStateOf<List<AudioFile>>(emptyList()) }
     var currentAudio by player.currentAudio
     var isPlaying by player.isPlaying
@@ -245,7 +248,8 @@ fun BeatBoxApp(
                     transparentTopBar = selectedTab == 0,
                     showCompactTopBar = selectedTab == 0 && compactTopBarVisible,
                     onCompactProfileClick = { if (userProfile.isLoggedIn) overlays.showProfile = true else overlays.showAuth = true },
-                    onCompactSettingsClick = { overlays.showSettings = true }
+                    onCompactSettingsClick = { overlays.showSettings = true },
+                    onMiniArtBoundsChange = { miniArtBounds = it }
                 ) { padding ->
                     Box(Modifier.fillMaxSize().padding(padding)) {
                         if (!hasPermission) {
@@ -319,6 +323,7 @@ fun BeatBoxApp(
             onEQPresetChange = { currentEQPreset = it },
             visualizerLevel = visualizerLevel,
             visualizerWaveform = visualizerWaveform,
+            miniArtBounds = miniArtBounds,
             onPlayPause = togglePlayPause,
             onNext = playNext,
             onPrev = playPrev,

@@ -17,6 +17,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.blackstack.beatbox.ui.dialogs.AddToPlaylistDialog
 import com.blackstack.beatbox.ui.dialogs.CreatePlaylistDialog
@@ -74,6 +75,7 @@ fun BeatBoxOverlays(
     onEQPresetChange: (EQPreset) -> Unit,
     visualizerLevel: Float,
     visualizerWaveform: FloatArray,
+    miniArtBounds: Rect?,
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
     onPrev: () -> Unit,
@@ -177,7 +179,8 @@ fun BeatBoxOverlays(
                     onOpenEQ = { overlays.showEQ = true },
                     onOpenSleepTimer = { overlays.showSleepTimer = true },
                     visualizerLevel = visualizerLevel,
-                    visualizerWaveform = visualizerWaveform
+                    visualizerWaveform = visualizerWaveform,
+                    heroSourceBounds = miniArtBounds
                 )
             }
         }

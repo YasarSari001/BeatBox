@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -34,15 +35,21 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.boundsInParent
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -51,9 +58,11 @@ import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.blackstack.beatbox.ui.theme.BeatBoxMotion
+import kotlin.math.roundToInt
 
 /** Alt navigasyondaki tek bir sekme. */
 data class BeatBoxNavItem(
@@ -76,6 +85,38 @@ fun BeatBoxBottomBar(
     items: List<BeatBoxNavItem>,
     modifier: Modifier = Modifier
 ) {
+    val density = LocalDensity.current
+    val primary = MaterialTheme.colorScheme.primary
+    // Sekme sınırları: kayan pill bu ölçüler arasında ilerler.
+    var itemBounds by remember { mutableStateOf<Map<Int, Rect>>(emptyMap()) }
+    val targetBounds = itemBounds[selectedTab]
+
+    val pillLeft by animateFloatAsState(
+        targetValue = targetBounds?.left ?: 0f,
+        animationSpec = BeatBoxMotion.Soft,
+        label = "nav_pill_left"
+    )
+    val pillTop by animateFloatAsState(
+        targetValue = targetBounds?.top ?: 0f,
+        animationSpec = BeatBoxMotion.Soft,
+        label = "nav_pill_top"
+    )
+    val pillWidth by animateFloatAsState(
+        targetValue = targetBounds?.width ?: 0f,
+        animationSpec = BeatBoxMotion.Soft,
+        label = "nav_pill_width"
+    )
+    val pillHeight by animateFloatAsState(
+        targetValue = targetBounds?.height ?: 0f,
+        animationSpec = BeatBoxMotion.Soft,
+        label = "nav_pill_height"
+    )
+    val pillAlpha by animateFloatAsState(
+        targetValue = if (targetBounds != null) 1f else 0f,
+        animationSpec = tween(durationMillis = BeatBoxMotion.Quick),
+        label = "nav_pill_alpha"
+    )
+
     Surface(
         modifier = modifier
             .fillMaxWidth()
@@ -96,21 +137,44 @@ fun BeatBoxBottomBar(
         shadowElevation = 18.dp,
         tonalElevation = 2.dp
     ) {
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(62.dp)
-                .padding(5.dp),
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(5.dp)
         ) {
-            items.forEachIndexed { index, item ->
-                BeatBoxNavItemView(
-                    item = item,
-                    selected = selectedTab == index,
-                    onSelect = { onTabSelected(index) },
-                    modifier = Modifier.weight(1f)
+            // Tek bir pill tüm sekmeler arasında kayar; her sekmede ayrı
+            // beliren soluk bir arka plan yerine tek sürekli gösterge.
+            if (pillAlpha > 0.01f) {
+                Box(
+                    modifier = Modifier
+                        .offset { IntOffset(pillLeft.roundToInt(), pillTop.roundToInt()) }
+                        .size(
+                            with(density) { pillWidth.toDp() },
+                            with(density) { pillHeight.toDp() }
+                        )
+                        .padding(horizontal = 2.dp, vertical = 5.dp)
+                        .graphicsLayer { alpha = pillAlpha }
+                        .background(primary.copy(alpha = 0.17f), RoundedCornerShape(21.dp))
                 )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                items.forEachIndexed { index, item ->
+                    BeatBoxNavItemView(
+                        item = item,
+                        selected = selectedTab == index,
+                        onSelect = { onTabSelected(index) },
+                        onBoundsChange = { rect -> itemBounds = itemBounds + (index to rect) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
     }
@@ -121,15 +185,14 @@ private fun BeatBoxNavItemView(
     item: BeatBoxNavItem,
     selected: Boolean,
     onSelect: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onBoundsChange: (Rect) -> Unit = {}
 ) {
     val haptic = LocalHapticFeedback.current
     // Secim hem dokunmayla hem de TalkBack eylemiyle ayni yoldan gecer.
     val select = {
-        if (!selected) {
-            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-            onSelect()
-        }
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        if (!selected) onSelect()
     }
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
@@ -137,11 +200,6 @@ private fun BeatBoxNavItemView(
         targetValue = if (pressed) 0.92f else 1f,
         animationSpec = tween(durationMillis = 120),
         label = "nav_press_scale"
-    )
-    val pill by animateFloatAsState(
-        targetValue = if (selected) 1f else 0f,
-        animationSpec = BeatBoxMotion.Soft,
-        label = "nav_pill"
     )
     val iconScale by animateFloatAsState(
         targetValue = if (selected) 1f else 0.94f,
@@ -154,6 +212,7 @@ private fun BeatBoxNavItemView(
     Box(
         modifier = modifier
             .fillMaxHeight()
+            .onGloballyPositioned { onBoundsChange(it.boundsInParent()) }
             .clip(RoundedCornerShape(24.dp))
             .graphicsLayer {
                 scaleX = pressScale * iconScale
@@ -180,19 +239,6 @@ private fun BeatBoxNavItemView(
             ),
         contentAlignment = Alignment.Center
     ) {
-        // Seçili sekmenin arkasındaki pill.
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .padding(horizontal = 2.dp, vertical = 5.dp)
-                .graphicsLayer {
-                    alpha = pill
-                    scaleX = 0.90f + pill * 0.10f
-                    scaleY = 0.90f + pill * 0.10f
-                }
-                .background(primary.copy(alpha = 0.17f), RoundedCornerShape(21.dp))
-        )
-
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,

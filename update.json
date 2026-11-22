@@ -1,6 +1,6 @@
 {
-  "versionCode": 9,
-  "versionName": "3.6",
+  "versionCode": 10,
+  "versionName": "3.7",
   "apkUrl": "https://github.com/YasarSari001/BeatBox/releases/latest/download/BeatBox.apk",
-  "changelog": "BeatBox 3.6\n• Açılış animasyonu yenilendi: logodan yayılan halkalar, dönen ışıltı, harf aralığı animasyonu ve ekolayzer çubukları\n• Açılış süresi 1.5 saniye; azaltılmış hareket ayarına saygılı\n• Şarkı sözü ekranı, entegrasyonlar ve giriş ekranı yenilemesi dahil\n• Güncelleme her açılışta kontrol edilir ve yeni sürüm anında görünür"
+  "changelog": "BeatBox 3.7\n• Mini oynatıcıdan tam ekran oynatıcıya geçerken albüm kapağı büyüyerek yer değiştiriyor; kapatırken aynı yere küçülüyor\n• İlerleme çubuğu dalga formuna dönüştü: şarkıya özel dalga, çalan kısmın renkli vurgusu ve dokun/sürükle ile konum değiştirme\n• Alt navigasyonda tek bir pill göstergesi sekmeler arasında kayıyor, seçimde dokunsal geri bildirim var\n• Şarkı sözü ekranı, entegrasyonlar ve giriş ekranı yenilemesi dahil\n• Güncelleme her açılışta kontrol edilir ve yeni sürüm anında görünür"
 }

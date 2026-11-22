@@ -41,6 +41,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
@@ -81,7 +84,9 @@ fun MiniPlayerBar(
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
     onPrev: () -> Unit,
-    onSwipeUp: () -> Unit
+    onSwipeUp: () -> Unit,
+    /** Kapak görselinin kök penceredeki konumu; hero morph için kullanılır. */
+    onArtBoundsChange: (Rect) -> Unit = {}
 ) {
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     var rawProgress by remember(audio?.id) { mutableFloatStateOf(0f) }
@@ -175,6 +180,7 @@ fun MiniPlayerBar(
                         a = audio,
                         modifier = Modifier
                             .size(48.dp)
+                            .onGloballyPositioned { onArtBoundsChange(it.boundsInRoot()) }
                             .clip(RoundedCornerShape(15.dp)),
                         isHQ = true
                     )
@@ -182,6 +188,7 @@ fun MiniPlayerBar(
                     Box(
                         modifier = Modifier
                             .size(48.dp)
+                            .onGloballyPositioned { onArtBoundsChange(it.boundsInRoot()) }
                             .background(primary.copy(alpha = 0.14f), RoundedCornerShape(15.dp)),
                         contentAlignment = Alignment.Center
                     ) {

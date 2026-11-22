@@ -1100,5 +1100,8 @@ internal val extraTranslations: Map<String, Map<String, String>> = mapOf(
     ),
     "update_check_failed" to mapOf(
         "en" to "Could not reach the update server.", "tr" to "Güncelleme sunucusuna ulaşılamadı."
+    ),
+    "seek_position" to mapOf(
+        "en" to "Playback position", "tr" to "Çalma konumu"
     )
 )

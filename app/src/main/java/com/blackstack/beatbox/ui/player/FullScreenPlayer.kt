@@ -32,19 +32,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import com.blackstack.beatbox.ui.components.AlbumArtImage
 import com.blackstack.beatbox.lyrics.LyricsDatabase
 import com.blackstack.beatbox.lyrics.LyricsProvider
@@ -53,6 +61,8 @@ import com.blackstack.beatbox.lyrics.LyricsViewModel
 import com.blackstack.beatbox.ui.components.MusicVisualizer
 import com.blackstack.beatbox.ui.components.SongItem
 import com.blackstack.beatbox.ui.components.formatTime
+import com.blackstack.beatbox.ui.theme.BeatBoxMotion
+import com.blackstack.beatbox.ui.theme.LocalReducedMotion
 
 /**
  * Metrolist düzenindeki tam ekran oynatıcı.
@@ -87,7 +97,9 @@ fun FullScreenPlayer(
     onOpenEQ: (() -> Unit)? = null,
     onOpenSleepTimer: (() -> Unit)? = null,
     visualizerLevel: Float = 0f,
-    visualizerWaveform: FloatArray = FloatArray(0)
+    visualizerWaveform: FloatArray = FloatArray(0),
+    /** Mini oynatıcı kapağının açılış anındaki konumu; hero morph başlangıcı. */
+    heroSourceBounds: Rect? = null
 ) {
     val context = LocalContext.current
     var pos by remember { mutableFloatStateOf(0f) }
@@ -99,6 +111,51 @@ fun FullScreenPlayer(
     var showSongInfoDialog by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
     var showSpeedDialog by remember { mutableStateOf(false) }
+
+    // ── Hero morph ────────────────────────────────────────────────────────
+    // Kapak, mini oynatıcıdaki küçük boyutundan tam ekran boyutuna büyür.
+    // Gerçek kapak, morph tamamlanana kadar görünmez kalır; geçiş katmanı
+    // aradaki kareyi çizer.
+    val density = LocalDensity.current
+    val reducedMotion = LocalReducedMotion.current
+    val scope = rememberCoroutineScope()
+    val hasHeroSource = heroSourceBounds != null
+    val morph = remember { Animatable(if (hasHeroSource) 0f else 1f) }
+    var artBounds by remember { mutableStateOf<Rect?>(null) }
+    var collapsing by remember { mutableStateOf(false) }
+
+    LaunchedEffect(artBounds) {
+        val target = artBounds
+        if (hasHeroSource && target != null && morph.value < 1f && !collapsing) {
+            if (reducedMotion) {
+                morph.snapTo(1f)
+            } else {
+                morph.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(
+                        durationMillis = BeatBoxMotion.Cinematic,
+                        easing = BeatBoxMotion.ExpressiveEasing
+                    )
+                )
+            }
+        }
+    }
+
+    // Kapatma: kapak önce mini oynatıcıdaki yerine küçülür, sonra ekran kapanır.
+    val requestCollapse: () -> Unit = {
+        if (!collapsing && hasHeroSource && !reducedMotion && morph.value > 0.98f) {
+            collapsing = true
+            scope.launch {
+                morph.animateTo(
+                    targetValue = 0f,
+                    animationSpec = tween(300, easing = FastOutLinearInEasing)
+                )
+                onCollapse()
+            }
+        } else {
+            onCollapse()
+        }
+    }
 
     val audioManager = remember(context) {
         context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
@@ -200,7 +257,7 @@ fun FullScreenPlayer(
         ) {
             PlayerTopBar(
                 strings = strings,
-                onCollapse = onCollapse,
+                onCollapse = requestCollapse,
                 onOpenEQ = onOpenEQ,
                 moreMenu = {
                     Box {
@@ -327,9 +384,11 @@ fun FullScreenPlayer(
                         PlayerArtwork(
                             audio = song,
                             size = artSize,
+                            alpha = morph.value,
+                            onBoundsChange = { rect -> artBounds = rect },
                             onNext = onNext,
                             onPrev = onPrev,
-                            onCollapse = onCollapse
+                            onCollapse = requestCollapse
                         )
                     }
                 }
@@ -355,41 +414,23 @@ fun FullScreenPlayer(
 
             Spacer(Modifier.height(2.dp))
 
-            Slider(
-                value = pos,
-                onValueChange = {
+            val trackDuration = a.duration.toFloat().takeIf { it > 0f } ?: 1f
+            WaveformSeekBar(
+                progress = (pos / trackDuration).coerceIn(0f, 1f),
+                durationMs = a.duration,
+                audioKey = a.id,
+                isPlaying = isPlaying,
+                liveWaveform = visualizerWaveform,
+                contentDescription = strings.get("seek_position"),
+                onScrub = { fraction ->
                     drag = true
-                    pos = it
+                    pos = fraction * trackDuration
                 },
-                onValueChangeFinished = {
-                    player.seekTo(pos.toInt())
+                onScrubFinished = { fraction ->
+                    val target = (fraction * trackDuration).toInt()
+                    pos = target.toFloat()
+                    player.seekTo(target)
                     drag = false
-                },
-                valueRange = 0f..(a.duration.toFloat().takeIf { it > 0 } ?: 1f),
-                colors = SliderDefaults.colors(
-                    thumbColor = Color.White,
-                    activeTrackColor = MaterialTheme.colorScheme.primary,
-                    inactiveTrackColor = Color.White.copy(alpha = 0.20f)
-                ),
-                thumb = {
-                    Box(
-                        Modifier
-                            .size(16.dp)
-                            .clip(CircleShape)
-                            .background(Color.White)
-                    )
-                },
-                track = { sliderState ->
-                    SliderDefaults.Track(
-                        sliderState = sliderState,
-                        colors = SliderDefaults.colors(
-                            activeTrackColor = MaterialTheme.colorScheme.primary,
-                            inactiveTrackColor = Color.White.copy(alpha = 0.20f),
-                            activeTickColor = Color.Transparent,
-                            inactiveTickColor = Color.Transparent
-                        ),
-                        drawStopIndicator = {}
-                    )
                 },
                 modifier = Modifier.fillMaxWidth()
             )
@@ -456,6 +497,38 @@ fun FullScreenPlayer(
             )
 
             Spacer(Modifier.height(8.dp))
+        }
+
+        // Hero morph geçiş katmanı: mini oynatıcıdaki kapak büyüyerek
+        // tam ekran kapağıın yerine oturur. Kaynak ve hedef ölçüler kök
+        // penceredeki koordinatlardır.
+        val heroSource = heroSourceBounds
+        val heroTarget = artBounds
+        if (heroSource != null && heroTarget != null && morph.value < 0.999f) {
+            val fraction = morph.value
+            val left = heroSource.left + (heroTarget.left - heroSource.left) * fraction
+            val top = heroSource.top + (heroTarget.top - heroSource.top) * fraction
+            val widthPx = heroSource.width + (heroTarget.width - heroSource.width) * fraction
+            val heightPx = heroSource.height + (heroTarget.height - heroSource.height) * fraction
+            val radius = (15f + (26f - 15f) * fraction).dp
+            val morphShape = RoundedCornerShape(radius)
+            Box(
+                modifier = Modifier
+                    .offset { IntOffset(left.roundToInt(), top.roundToInt()) }
+                    .size(
+                        with(density) { widthPx.toDp() },
+                        with(density) { heightPx.toDp() }
+                    )
+                    .shadow(26.dp, morphShape, spotColor = Color.Black)
+                    .clip(morphShape)
+            ) {
+                AlbumArtImage(a, Modifier.fillMaxSize(), true)
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .border(1.dp, Color.White.copy(alpha = 0.12f), morphShape)
+                )
+            }
         }
 
         AnimatedVisibility(
@@ -615,7 +688,10 @@ private fun PlayerArtwork(
     onNext: () -> Unit,
     onPrev: () -> Unit,
     onCollapse: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** Hero morph ilerlemesi; 1 iken kapak tam görünür. */
+    alpha: Float = 1f,
+    onBoundsChange: (Rect) -> Unit = {}
 ) {
     var totalDragX by remember { mutableFloatStateOf(0f) }
     var totalDragY by remember { mutableFloatStateOf(0f) }
@@ -623,6 +699,8 @@ private fun PlayerArtwork(
     Box(
         modifier = modifier
             .size(size)
+            .onGloballyPositioned { onBoundsChange(it.boundsInRoot()) }
+            .graphicsLayer { this.alpha = alpha }
             .pointerInput(audio.id) {
                 detectDragGestures(
                     onDragStart = {

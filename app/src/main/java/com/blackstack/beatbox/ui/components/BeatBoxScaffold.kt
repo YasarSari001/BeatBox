@@ -120,6 +120,8 @@ fun BeatBoxScaffold(
     showCompactTopBar: Boolean = false,
     onCompactProfileClick: () -> Unit = {},
     onCompactSettingsClick: () -> Unit = {},
+    /** Mini oynatıcı kapağının kök penceredeki konumu (hero morph için). */
+    onMiniArtBoundsChange: (androidx.compose.ui.geometry.Rect) -> Unit = {},
     content: @Composable (PaddingValues) -> Unit
 ) {
     val locale = LocalConfiguration.current.locales[0]
@@ -430,7 +432,8 @@ fun BeatBoxScaffold(
                     onPlayPause = onPlayPause,
                     onNext = onNext,
                     onPrev = onPrev,
-                    onSwipeUp = onOpenPlayer
+                    onSwipeUp = onOpenPlayer,
+                    onArtBoundsChange = onMiniArtBoundsChange
                 )
             }
             // Bottom Navigation Bar - Aurora Glass
