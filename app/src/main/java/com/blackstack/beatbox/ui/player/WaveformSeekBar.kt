@@ -21,6 +21,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.sp
+import com.blackstack.beatbox.ui.components.formatTime
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
@@ -34,12 +41,14 @@ import kotlin.math.sin
  * Çubuk yükseklikleri şarkı kimliğinden türetilen sabit bir zarf ile çizilir;
  * böylece aynı şarkıda her açılışta aynı dalga görünür. Oynatma sırasında
  * gerçek visualizer verisi çalma konumunun çevresindeki çubukları canlandırır.
- * Dokunma veya sürükleme ile konum değiştirilir; sürükleme sırasında üstteki
- * zaman etiketleri parmakla birlikte güncellenir.
+ * Dokunma veya sürükleme ile konum değiştirilir; sürükleme sırasında playhead
+ * üzerinde o konumun zamanı balon içinde gösterilir.
  */
 @Composable
 fun WaveformSeekBar(
     progress: Float,
+    /** Toplam süre; sürükleme balonundaki zaman hesabı için. */
+    durationMs: Long,
     audioKey: Long,
     isPlaying: Boolean,
     liveWaveform: FloatArray,
@@ -60,6 +69,7 @@ fun WaveformSeekBar(
         }
     }
 
+    val measurer = rememberTextMeasurer()
     val primary = MaterialTheme.colorScheme.primary
     val secondary = MaterialTheme.colorScheme.secondary
     val playedBrush = remember(primary, secondary) {
@@ -148,6 +158,34 @@ fun WaveformSeekBar(
             radius = 3.5.dp.toPx(),
             center = Offset(playheadX, centerY)
         )
+
+        // Sürükleme sırasında zaman balonu: parmağın hedeflediği konumu
+        // gösterir, kenarlardan taşmaz.
+        if (scrubFraction != null) {
+            val layout = measurer.measure(
+                AnnotatedString(formatTime((shown * durationMs).toLong())),
+                style = TextStyle(
+                    color = Color.White,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            )
+            val padH = 8.dp.toPx()
+            val padV = 4.dp.toPx()
+            val bubbleWidth = layout.size.width + padH * 2f
+            val bubbleHeight = layout.size.height + padV * 2f
+            val bubbleX = (playheadX - bubbleWidth / 2f)
+                .coerceIn(0f, (size.width - bubbleWidth).coerceAtLeast(0f))
+            val bubbleY = (centerY - bubbleHeight / 2f)
+                .coerceIn(0f, (size.height - bubbleHeight).coerceAtLeast(0f))
+            drawRoundRect(
+                color = Color(0xFF14161F).copy(alpha = 0.96f),
+                topLeft = Offset(bubbleX, bubbleY),
+                size = Size(bubbleWidth, bubbleHeight),
+                cornerRadius = CornerRadius(bubbleHeight / 2f)
+            )
+            drawText(layout, topLeft = Offset(bubbleX + padH, bubbleY + padV))
+        }
     }
 }
 

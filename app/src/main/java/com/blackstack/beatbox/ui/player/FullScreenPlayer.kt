@@ -35,12 +35,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -438,6 +440,7 @@ fun FullScreenPlayer(
             val trackDuration = a.duration.toFloat().takeIf { it > 0f } ?: 1f
             WaveformSeekBar(
                 progress = (pos / trackDuration).coerceIn(0f, 1f),
+                durationMs = a.duration.toLong(),
                 audioKey = a.id,
                 isPlaying = isPlaying,
                 liveWaveform = visualizerWaveform,
@@ -715,29 +718,62 @@ private fun PlayerArtwork(
 ) {
     var totalDragX by remember { mutableFloatStateOf(0f) }
     var totalDragY by remember { mutableFloatStateOf(0f) }
+    // Aşağı sürükleme: kapak parmağın yarısı kadar direnir (lastik bant),
+    // hafifçe küçülür ve soluklaşır; bırakınca geri yaylanır.
+    var dismissDrag by remember { mutableFloatStateOf(0f) }
+    val haptic = LocalHapticFeedback.current
+    val scope = rememberCoroutineScope()
+    val dismissThreshold = with(LocalDensity.current) { size.toPx() } * 0.22f
+    val cancelDismiss: () -> Unit = {
+        scope.launch {
+            animate(dismissDrag, 0f) { value, _ -> dismissDrag = value }
+        }
+    }
     val shape = RoundedCornerShape(26.dp)
     Box(
         modifier = modifier
             .size(size)
             .onGloballyPositioned { onBoundsChange(it.boundsInRoot()) }
-            .graphicsLayer { this.alpha = alphaProvider() }
+            .graphicsLayer {
+                // Durum katman aşamasında okunur; sürükleme recomposition tetiklemez.
+                val progress = (dismissDrag / dismissThreshold).coerceIn(0f, 1f)
+                alpha = alphaProvider() * (1f - 0.18f * progress)
+                translationY = dismissDrag * 0.5f
+                val dragScale = 1f - 0.06f * progress
+                scaleX = dragScale
+                scaleY = dragScale
+            }
             .pointerInput(audio.id) {
                 detectDragGestures(
                     onDragStart = {
                         totalDragX = 0f
                         totalDragY = 0f
+                        dismissDrag = 0f
                     },
                     onDragEnd = {
-                        if (abs(totalDragX) > abs(totalDragY) && abs(totalDragX) > 90f) {
+                        val horizontal = abs(totalDragX) > abs(totalDragY)
+                        if (horizontal && abs(totalDragX) > 90f) {
                             if (totalDragX < 0) onNext() else onPrev()
-                        } else if (totalDragY > 120f) {
+                        } else if (!horizontal && totalDragY > dismissThreshold) {
+                            // Eşik geçildi: kısa haptik, kapak yerine döner ve
+                            // oynatıcı morph ile kapanır.
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            dismissDrag = 0f
                             onCollapse()
+                        } else {
+                            cancelDismiss()
                         }
                     },
+                    onDragCancel = { cancelDismiss() },
                     onDrag = { change, dragAmount ->
                         change.consume()
                         totalDragX += dragAmount.x
                         totalDragY += dragAmount.y
+                        dismissDrag = if (abs(totalDragY) >= abs(totalDragX)) {
+                            totalDragY.coerceAtLeast(0f)
+                        } else {
+                            0f
+                        }
                     }
                 )
             }
