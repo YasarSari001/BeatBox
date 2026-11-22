@@ -1,6 +1,6 @@
 {
-  "versionCode": 10,
-  "versionName": "3.7",
+  "versionCode": 11,
+  "versionName": "3.8",
   "apkUrl": "https://github.com/YasarSari001/BeatBox/releases/latest/download/BeatBox.apk",
-  "changelog": "BeatBox 3.7\n• Mini oynatıcıdan tam ekran oynatıcıya geçerken albüm kapağı büyüyerek yer değiştiriyor; kapatırken aynı yere küçülüyor\n• İlerleme çubuğu dalga formuna dönüştü: şarkıya özel dalga, çalan kısmın renkli vurgusu ve dokun/sürükle ile konum değiştirme\n• Alt navigasyonda tek bir pill göstergesi sekmeler arasında kayıyor, seçimde dokunsal geri bildirim var\n• Şarkı sözü ekranı, entegrasyonlar ve giriş ekranı yenilemesi dahil\n• Güncelleme her açılışta kontrol edilir ve yeni sürüm anında görünür"
+  "changelog": "BeatBox 3.8\n• Tam ekran oynatıcıya geçişte kapak artık her zaman mini oynatıcıdaki gerçek konumundan büyüyor\n• Kapatma tek yoldan çalışıyor: üst çubuk, geri tuşu ve aşağı sürükleme aynı kapak animasyonunu kullanıyor\n• Animasyon yarıda kalsa bile oynatıcı kapanıyor; ekran takılı kalmıyor\n• Eski ve düşük RAM'li cihazlarda blur, aurora hareketi ve visualizer animasyonları kapatılarak akıcılık artırıldı\n• Performans modu açıkken de aynı sadeleştirme uygulanıyor"
 }
