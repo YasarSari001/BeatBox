@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.PointMode
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import com.blackstack.beatbox.ui.theme.LocalReducedMotion
+import com.blackstack.beatbox.ui.theme.rememberPerformanceMode
 import kotlin.random.Random
 
 /**
@@ -47,6 +48,8 @@ fun AuroraBackground(
     content: @Composable () -> Unit
 ) {
     val reducedMotion = LocalReducedMotion.current
+    // Düşük donanımda ışık sürüklenmesi ve grain kapatılır; statik aurora kalır.
+    val performanceMode = rememberPerformanceMode()
     val primary = MaterialTheme.colorScheme.primary
     val secondary = MaterialTheme.colorScheme.secondary
     val tertiary = MaterialTheme.colorScheme.tertiary
@@ -62,7 +65,7 @@ fun AuroraBackground(
         )
     }
 
-    val drift: State<Float> = if (reducedMotion) {
+    val drift: State<Float> = if (reducedMotion || performanceMode) {
         remember { mutableStateOf(0f) }
     } else {
         val transition = rememberInfiniteTransition(label = "aurora_drift")
@@ -152,29 +155,32 @@ fun AuroraBackground(
         )
 
         // Grain: deterministik noktalar, animasyona katılmaz.
-        val grain = remember {
-            val random = Random(0xBE47)
-            List(1_100) { Offset(random.nextFloat(), random.nextFloat()) }
-        }
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .drawWithCache {
-                    val points = grain.map { Offset(it.x * size.width, it.y * size.height) }
-                    onDrawBehind {
-                        drawPoints(
-                            points = points,
-                            pointMode = PointMode.Points,
-                            color = if (isLight) {
-                                Color.Black.copy(alpha = 0.02f)
-                            } else {
-                                Color.White.copy(alpha = 0.028f)
-                            },
-                            strokeWidth = 1f
-                        )
+        // Performans modunda bu tam ekran katman hiç çizilmez.
+        if (!performanceMode) {
+            val grain = remember {
+                val random = Random(0xBE47)
+                List(1_100) { Offset(random.nextFloat(), random.nextFloat()) }
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .drawWithCache {
+                        val points = grain.map { Offset(it.x * size.width, it.y * size.height) }
+                        onDrawBehind {
+                            drawPoints(
+                                points = points,
+                                pointMode = PointMode.Points,
+                                color = if (isLight) {
+                                    Color.Black.copy(alpha = 0.02f)
+                                } else {
+                                    Color.White.copy(alpha = 0.028f)
+                                },
+                                strokeWidth = 1f
+                            )
+                        }
                     }
-                }
-        )
+            )
+        }
 
         // Kenarlarda hafif karartma; ortadaki içerik daha okunaklı olur.
         Box(

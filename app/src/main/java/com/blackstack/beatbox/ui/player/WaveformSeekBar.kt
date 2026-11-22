@@ -1,11 +1,5 @@
 package com.blackstack.beatbox.ui.player
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -31,7 +25,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import com.blackstack.beatbox.ui.theme.LocalReducedMotion
 import kotlin.math.abs
 import kotlin.math.sin
 
@@ -57,7 +50,6 @@ fun WaveformSeekBar(
     modifier: Modifier = Modifier
 ) {
     var scrubFraction by remember { mutableStateOf<Float?>(null) }
-    val reducedMotion = LocalReducedMotion.current
     val shown = (scrubFraction ?: progress).coerceIn(0f, 1f)
     val envelope = remember(audioKey) { waveformEnvelope(audioKey) }
 
@@ -67,22 +59,6 @@ fun WaveformSeekBar(
         } else {
             liveWaveform.average().toFloat().coerceIn(0f, 1f)
         }
-    }
-
-    val pulse = if (!isPlaying || reducedMotion) {
-        1f
-    } else {
-        val transition = rememberInfiniteTransition(label = "waveform_pulse")
-        val value by transition.animateFloat(
-            initialValue = 0.9f,
-            targetValue = 1.1f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(1100, easing = LinearEasing),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "waveform_pulse_value"
-        )
-        value
     }
 
     val primary = MaterialTheme.colorScheme.primary
@@ -134,7 +110,7 @@ fun WaveformSeekBar(
             val barFraction = (index + 0.5f) / count
             val distance = abs(barFraction - shown)
             val liveBoost = 1f + energy * (1f - (distance * 6f)).coerceIn(0f, 1f) * 0.6f
-            val height = (maxBarHeight * envelope[index] * liveBoost * pulse)
+            val height = (maxBarHeight * envelope[index] * liveBoost)
                 .coerceIn(2f, maxBarHeight)
             val left = index * slot + (slot - barWidth) / 2f
             val top = centerY - height

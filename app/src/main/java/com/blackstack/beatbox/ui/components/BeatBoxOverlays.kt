@@ -75,7 +75,7 @@ fun BeatBoxOverlays(
     onEQPresetChange: (EQPreset) -> Unit,
     visualizerLevel: Float,
     visualizerWaveform: FloatArray,
-    miniArtBounds: Rect?,
+    heroSourceBounds: Rect?,
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
     onPrev: () -> Unit,
@@ -180,7 +180,7 @@ fun BeatBoxOverlays(
                     onOpenSleepTimer = { overlays.showSleepTimer = true },
                     visualizerLevel = visualizerLevel,
                     visualizerWaveform = visualizerWaveform,
-                    heroSourceBounds = miniArtBounds
+                    heroSourceBounds = heroSourceBounds
                 )
             }
         }

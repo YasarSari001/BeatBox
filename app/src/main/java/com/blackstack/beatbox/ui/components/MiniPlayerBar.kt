@@ -30,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -86,10 +87,16 @@ fun MiniPlayerBar(
     onPrev: () -> Unit,
     onSwipeUp: () -> Unit,
     /** Kapak görselinin kök penceredeki konumu; hero morph için kullanılır. */
-    onArtBoundsChange: (Rect) -> Unit = {}
+    onArtBoundsChange: (Rect?) -> Unit = {}
 ) {
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     var rawProgress by remember(audio?.id) { mutableFloatStateOf(0f) }
+
+    // Mini oynatıcı görünürlükten çıkınca ölçü unutulur; tam ekran oynatıcı
+    // bayat bir konumdan büyümeye başlamaz.
+    DisposableEffect(Unit) {
+        onDispose { onArtBoundsChange(null) }
+    }
 
     LaunchedEffect(audio?.id, isPlaying) {
         if (audio == null) {

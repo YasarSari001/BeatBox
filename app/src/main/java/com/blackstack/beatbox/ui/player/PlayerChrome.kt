@@ -91,6 +91,7 @@ import com.blackstack.beatbox.ui.components.AlbumArtCache
 import com.blackstack.beatbox.AudioFile
 import com.blackstack.beatbox.Strings
 import com.blackstack.beatbox.ui.theme.LocalReducedMotion
+import com.blackstack.beatbox.ui.theme.rememberPerformanceMode
 import kotlinx.coroutines.delay
 
 /**
@@ -105,7 +106,10 @@ import kotlinx.coroutines.delay
 internal fun PlayerBackdrop(audio: AudioFile, modifier: Modifier = Modifier) {
     val primary = MaterialTheme.colorScheme.primary
     val secondary = MaterialTheme.colorScheme.secondary
-    val blurSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    // Tam ekran blur en pahalı efekt; performans modunda ve eski cihazlarda
+    // atlanır, yerine yarı saydam kapak dokusu kullanılır.
+    val performanceMode = rememberPerformanceMode()
+    val blurSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !performanceMode
     var bitmap by remember(audio.id) { mutableStateOf(AlbumArtCache.bitmapCache.get(audio.id)) }
 
     LaunchedEffect(audio.id) {
@@ -126,11 +130,11 @@ internal fun PlayerBackdrop(audio: AudioFile, modifier: Modifier = Modifier) {
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {
-                        scaleX = 1.2f
-                        scaleY = 1.2f
+                        scaleX = if (blurSupported) 1.2f else 1f
+                        scaleY = if (blurSupported) 1.2f else 1f
                         alpha = if (blurSupported) 0.64f else 0.18f
                     }
-                    .blur(90.dp)
+                    .then(if (blurSupported) Modifier.blur(90.dp) else Modifier)
             )
         }
         Box(

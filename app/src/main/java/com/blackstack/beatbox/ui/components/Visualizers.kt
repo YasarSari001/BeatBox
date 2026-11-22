@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.blackstack.beatbox.ui.theme.rememberPerformanceMode
 import kotlin.math.abs
 import kotlin.math.sin
 
@@ -26,20 +27,12 @@ fun EnhancedRealTimeVisualizer(
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("BeatBoxSettings", Context.MODE_PRIVATE) }
     val tempoVizEnabled = remember { prefs.getBoolean("tempo_visualization", true) }
-    val performanceMode = remember { prefs.getBoolean("performance_mode", false) }
-    
-    val infiniteTransition = rememberInfiniteTransition(label = "tempo_fallback")
-    val fallbackPhase by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = (2f * Math.PI).toFloat(),
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "tempo_phase"
-    )
+    // Düşük donanım veya performans modunda sürekli animasyon çalıştırılmaz;
+    // duraklatılmışken de hiçbir sonsuz animasyon kalmaz.
+    val performanceMode = rememberPerformanceMode()
+    val animated = tempoVizEnabled && !performanceMode && isPlaying
 
-    if (!tempoVizEnabled) {
+    if (!animated) {
         Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
             repeat(12) { index ->
                 val staticHeight = when {
@@ -68,7 +61,18 @@ fun EnhancedRealTimeVisualizer(
         return
     }
     
-    val barCount = if (performanceMode) 10 else 14
+    val infiniteTransition = rememberInfiniteTransition(label = "tempo_fallback")
+    val fallbackPhase by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2f * Math.PI).toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "tempo_phase"
+    )
+
+    val barCount = 14
     val hasRealData = isPlaying && waveform.any { it > 0.01f }
 
     Row(

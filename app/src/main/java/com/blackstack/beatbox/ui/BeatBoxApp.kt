@@ -124,9 +124,13 @@ fun BeatBoxApp(
 
     var playlists by remember { mutableStateOf(player.loadPlaylists()) }
     var selectedTab by remember { mutableIntStateOf(0) } // 0=Home, 1=Playlists, 2=Library
-    // Mini oynatıcı kapağının son bilinen konumu; tam ekran oynatıcı açılırken
-    // kapağın büyüyerek gelmesi (hero morph) için kullanılır.
+    // Mini oynatıcı kapağının görünürken ölçülen konumu. Oynatıcı açılırken
+    // bu değer dondurulur; böylece morph her zaman doğru noktadan başlar.
     var miniArtBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    var heroSourceBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    LaunchedEffect(overlays.showPlayer) {
+        if (!overlays.showPlayer) heroSourceBounds = null
+    }
     var currentPlaylist by remember { mutableStateOf<List<AudioFile>>(emptyList()) }
     var currentAudio by player.currentAudio
     var isPlaying by player.isPlaying
@@ -239,7 +243,10 @@ fun BeatBoxApp(
                     onPlayPause = togglePlayPause,
                     onNext = playNext,
                     onPrev = playPrev,
-                    onOpenPlayer = { overlays.showPlayer = true },
+                    onOpenPlayer = {
+                        heroSourceBounds = miniArtBounds
+                        overlays.showPlayer = true
+                    },
                     onCreatePlaylist = { overlays.showCreatePlaylist = true },
                     onOpenEQ = { overlays.showEQ = true },
                     onOpenSleepTimer = { overlays.showSleepTimer = true },
@@ -323,7 +330,7 @@ fun BeatBoxApp(
             onEQPresetChange = { currentEQPreset = it },
             visualizerLevel = visualizerLevel,
             visualizerWaveform = visualizerWaveform,
-            miniArtBounds = miniArtBounds,
+            heroSourceBounds = heroSourceBounds,
             onPlayPause = togglePlayPause,
             onNext = playNext,
             onPrev = playPrev,

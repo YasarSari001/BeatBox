@@ -121,7 +121,7 @@ fun BeatBoxScaffold(
     onCompactProfileClick: () -> Unit = {},
     onCompactSettingsClick: () -> Unit = {},
     /** Mini oynatıcı kapağının kök penceredeki konumu (hero morph için). */
-    onMiniArtBoundsChange: (androidx.compose.ui.geometry.Rect) -> Unit = {},
+    onMiniArtBoundsChange: (androidx.compose.ui.geometry.Rect?) -> Unit = {},
     content: @Composable (PaddingValues) -> Unit
 ) {
     val locale = LocalConfiguration.current.locales[0]

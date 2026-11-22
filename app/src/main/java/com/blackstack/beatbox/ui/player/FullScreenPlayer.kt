@@ -13,6 +13,7 @@ import com.blackstack.beatbox.*
 import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -63,6 +64,7 @@ import com.blackstack.beatbox.ui.components.SongItem
 import com.blackstack.beatbox.ui.components.formatTime
 import com.blackstack.beatbox.ui.theme.BeatBoxMotion
 import com.blackstack.beatbox.ui.theme.LocalReducedMotion
+import com.blackstack.beatbox.ui.theme.rememberPerformanceMode
 
 /**
  * Metrolist düzenindeki tam ekran oynatıcı.
@@ -118,22 +120,27 @@ fun FullScreenPlayer(
     // aradaki kareyi çizer.
     val density = LocalDensity.current
     val reducedMotion = LocalReducedMotion.current
+    val performanceMode = rememberPerformanceMode()
     val scope = rememberCoroutineScope()
-    val hasHeroSource = heroSourceBounds != null
+    // Ölçüsü alınamamış veya sıfır kalmış bir kaynak kullanılmaz; aksi halde
+    // kapak ekranın sol üst köşesinden büyüyerek gelirdi.
+    val validSource = heroSourceBounds?.takeIf { it.width > 1f && it.height > 1f }
+    val hasHeroSource = validSource != null
     val morph = remember { Animatable(if (hasHeroSource) 0f else 1f) }
     var artBounds by remember { mutableStateOf<Rect?>(null) }
-    var collapsing by remember { mutableStateOf(false) }
+    var closing by remember { mutableStateOf(false) }
+    var closeHandled by remember { mutableStateOf(false) }
 
     LaunchedEffect(artBounds) {
         val target = artBounds
-        if (hasHeroSource && target != null && morph.value < 1f && !collapsing) {
+        if (hasHeroSource && target != null && morph.value < 1f && !closing) {
             if (reducedMotion) {
                 morph.snapTo(1f)
             } else {
                 morph.animateTo(
                     targetValue = 1f,
                     animationSpec = tween(
-                        durationMillis = BeatBoxMotion.Cinematic,
+                        durationMillis = if (performanceMode) 260 else BeatBoxMotion.Cinematic,
                         easing = BeatBoxMotion.ExpressiveEasing
                     )
                 )
@@ -141,21 +148,36 @@ fun FullScreenPlayer(
         }
     }
 
-    // Kapatma: kapak önce mini oynatıcıdaki yerine küçülür, sonra ekran kapanır.
-    val requestCollapse: () -> Unit = {
-        if (!collapsing && hasHeroSource && !reducedMotion && morph.value > 0.98f) {
-            collapsing = true
-            scope.launch {
-                morph.animateTo(
-                    targetValue = 0f,
-                    animationSpec = tween(300, easing = FastOutLinearInEasing)
-                )
-                onCollapse()
-            }
-        } else {
+    // Kapatma tek seferliktir: yarım kalan morph ikinci bir dokunuşla veya
+    // geri tuşuyla yeniden başlatılmaz.
+    val finishClose: () -> Unit = {
+        if (!closeHandled) {
+            closeHandled = true
             onCollapse()
         }
     }
+
+    // Kapatma: kapak önce mini oynatıcıdaki yerine küçülür, sonra ekran kapanır.
+    val requestCollapse: () -> Unit = {
+        if (!closing && !closeHandled && hasHeroSource && !reducedMotion && morph.value > 0.98f) {
+            closing = true
+            scope.launch {
+                morph.animateTo(
+                    targetValue = 0f,
+                    animationSpec = tween(
+                        durationMillis = if (performanceMode) 200 else 300,
+                        easing = FastOutLinearInEasing
+                    )
+                )
+                finishClose()
+            }
+        } else {
+            finishClose()
+        }
+    }
+
+    // Geri tuşu da ekranın kendi kapanış animasyonunu kullanır.
+    BackHandler { requestCollapse() }
 
     val audioManager = remember(context) {
         context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
@@ -384,7 +406,7 @@ fun FullScreenPlayer(
                         PlayerArtwork(
                             audio = song,
                             size = artSize,
-                            alpha = morph.value,
+                            alphaProvider = { morph.value },
                             onBoundsChange = { rect -> artBounds = rect },
                             onNext = onNext,
                             onPrev = onPrev,
@@ -502,7 +524,7 @@ fun FullScreenPlayer(
         // Hero morph geçiş katmanı: mini oynatıcıdaki kapak büyüyerek
         // tam ekran kapağıın yerine oturur. Kaynak ve hedef ölçüler kök
         // penceredeki koordinatlardır.
-        val heroSource = heroSourceBounds
+        val heroSource = validSource
         val heroTarget = artBounds
         if (heroSource != null && heroTarget != null && morph.value < 0.999f) {
             val fraction = morph.value
@@ -690,7 +712,7 @@ private fun PlayerArtwork(
     onCollapse: () -> Unit,
     modifier: Modifier = Modifier,
     /** Hero morph ilerlemesi; 1 iken kapak tam görünür. */
-    alpha: Float = 1f,
+    alphaProvider: () -> Float = { 1f },
     onBoundsChange: (Rect) -> Unit = {}
 ) {
     var totalDragX by remember { mutableFloatStateOf(0f) }
@@ -700,7 +722,7 @@ private fun PlayerArtwork(
         modifier = modifier
             .size(size)
             .onGloballyPositioned { onBoundsChange(it.boundsInRoot()) }
-            .graphicsLayer { this.alpha = alpha }
+            .graphicsLayer { this.alpha = alphaProvider() }
             .pointerInput(audio.id) {
                 detectDragGestures(
                     onDragStart = {
