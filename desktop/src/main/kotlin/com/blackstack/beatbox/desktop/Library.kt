@@ -14,6 +14,7 @@ data class Track(
     val file: File,
     val title: String,
     val artist: String,
+    val album: String = "",
     val durationSeconds: Double,
     val modifiedAt: Long = 0L,
     val kind: MediaKind = MediaKind.AUDIO,
@@ -34,9 +35,10 @@ val imageExtensions = setOf("jpg", "jpeg", "png", "gif", "bmp", "webp", "jfif")
 /**
  * Klasörü alt klasörleriyle tarar.
  *
- * Ses dosyalarının başlık/sanatçısı dosya adından çıkarılır ve süresi ölçülür;
- * video ve fotoğraflar için süre ölçülmez (yüzlerce dosyada taramayı
- * yavaşlatırdı), video süresi oynatılırken okunur.
+ * Ses dosyalarının başlık/sanatçısı önce gömülü etiketten, yoksa dosya
+ * adından çıkarılır ve süresi ölçülür; video ve fotoğraflar için süre
+ * ölçülmez (yüzlerce dosyada taramayı yavaşlatırdı), video süresi
+ * oynatılırken okunur.
  */
 suspend fun scanFolder(root: File, engine: AudioEngine): List<Track> = withContext(Dispatchers.IO) {
     if (!root.isDirectory) return@withContext emptyList()
@@ -55,10 +57,14 @@ suspend fun scanFolder(root: File, engine: AudioEngine): List<Track> = withConte
             }
             val rawName = file.nameWithoutExtension
             val parsed = parseFilenameMetadata(rawName)
+            val embedded = if (kind == MediaKind.AUDIO) TagEditor.read(file) else null
+            val embeddedTitle = embedded?.title?.takeIf { it.isNotBlank() }
+            val embeddedArtist = embedded?.artist?.takeIf { it.isNotBlank() }
             Track(
                 file = file,
-                title = cleanDisplayTitle(parsed?.title ?: rawName),
-                artist = parsed?.artist.orEmpty(),
+                title = embeddedTitle ?: cleanDisplayTitle(parsed?.title ?: rawName),
+                artist = embeddedArtist ?: parsed?.artist.orEmpty(),
+                album = embedded?.album.orEmpty(),
                 durationSeconds = if (kind == MediaKind.AUDIO) engine.durationSeconds(file) else 0.0,
                 modifiedAt = file.lastModified(),
                 kind = kind,

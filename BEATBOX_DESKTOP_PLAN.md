@@ -28,7 +28,7 @@
 - [ ] Gapless oynatma (parçalar arası sessiz yok)
 - [ ] Crossfade (parça geçişi)
 - [ ] ReplayGain / ses normalizasyonu
-- [ ] Etiket (tag) düzenleme: başlık, sanatçı, albüm, tür
+- [x] Etiket (tag) düzenleme: başlık, sanatçı, albüm, tür, yıl, parça no — 2026-11-23
 - [ ] Albüm sanatı görünümü (kütüphede kare izgara)
 
 ### Aşama 3 — Telefon (APK) ile Tam Uyum (2-3 ay)
@@ -86,3 +86,15 @@
 - 4 yeni metin anahtarı × 12 dil.
 - `:desktop:compileKotlin` ve `:desktop:test` yeşil; uygulama 30 sn çalıştırılıp
   çökmediği doğrulandı.
+
+### 2026-11-23 — Etiket (ID3) düzenleme ✅
+- `net.jthink:jaudiotagger:3.0.1` bağımlılığı (LGPL-2.1, GPL-3.0 ile uyumlu).
+- `TagEditor.kt`: MP3/FLAC/OGG/M4A/WAV/AIFF etiket okuma-yazma; boş alan silme.
+- `TagEditorDialog.kt`: düzenleme penceresi (6 alan), kaydetme/iptal ve hata
+  gösterimi; 7 yeni metin anahtarı × 12 dil.
+- `Library.kt`: tarama artık gömülü etiketi dosya adına tercih eder;
+  `Track.album` eklendi ve lyrics isteğinde albüm kullanılıyor.
+- `Main.kt`: kütüphane satırında düzenleme düğmesi; kaydedince liste ve
+  oynatılan parça anında güncellenir.
+- `TagEditorTest.kt`: üretilen sessiz WAV üzerinde yaz/oku ve alan silme
+  testleri yeşil (Türkçe karakterler dahil).

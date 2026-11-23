@@ -379,6 +379,62 @@ private val desktopStrings: Map<String, Map<String, String>> = mapOf(
         "ar" to "زر الإغلاق يخفي النافذة ويستمر التشغيل.",
         "ko" to "닫기 버튼은 창을 숨기고 재생은 계속됩니다."
     ),
+    "tag_editor" to mapOf(
+        "tr" to "Etiketleri düzenle", "en" to "Edit tags",
+        "es" to "Editar etiquetas", "fr" to "Modifier les étiquettes",
+        "de" to "Tags bearbeiten", "it" to "Modifica tag",
+        "pt" to "Editar etiquetas", "ru" to "Изменить теги",
+        "ja" to "タグを編集", "zh" to "编辑标签",
+        "ar" to "تعديل الوسوم", "ko" to "태그 편집"
+    ),
+    "tag_save" to mapOf(
+        "tr" to "Kaydet", "en" to "Save",
+        "es" to "Guardar", "fr" to "Enregistrer",
+        "de" to "Speichern", "it" to "Salva",
+        "pt" to "Salvar", "ru" to "Сохранить",
+        "ja" to "保存", "zh" to "保存",
+        "ar" to "حفظ", "ko" to "저장"
+    ),
+    "tag_save_failed" to mapOf(
+        "tr" to "Etiketler kaydedilemedi.", "en" to "Couldn't save the tags.",
+        "es" to "No se pudieron guardar las etiquetas.", "fr" to "Impossible d'enregistrer les étiquettes.",
+        "de" to "Tags konnten nicht gespeichert werden.", "it" to "Impossibile salvare i tag.",
+        "pt" to "Não foi possível salvar as etiquetas.", "ru" to "Не удалось сохранить теги.",
+        "ja" to "タグを保存できませんでした。", "zh" to "无法保存标签。",
+        "ar" to "تعذّر حفظ الوسوم.", "ko" to "태그를 저장할 수 없습니다."
+    ),
+    "tag_album" to mapOf(
+        "tr" to "Albüm", "en" to "Album",
+        "es" to "Álbum", "fr" to "Album",
+        "de" to "Album", "it" to "Album",
+        "pt" to "Álbum", "ru" to "Альбом",
+        "ja" to "アルバム", "zh" to "专辑",
+        "ar" to "الألبوم", "ko" to "앨범"
+    ),
+    "tag_genre" to mapOf(
+        "tr" to "Tür", "en" to "Genre",
+        "es" to "Género", "fr" to "Genre",
+        "de" to "Genre", "it" to "Genere",
+        "pt" to "Gênero", "ru" to "Жанр",
+        "ja" to "ジャンル", "zh" to "流派",
+        "ar" to "النوع", "ko" to "장르"
+    ),
+    "tag_year" to mapOf(
+        "tr" to "Yıl", "en" to "Year",
+        "es" to "Año", "fr" to "Année",
+        "de" to "Jahr", "it" to "Anno",
+        "pt" to "Ano", "ru" to "Год",
+        "ja" to "年", "zh" to "年份",
+        "ar" to "السنة", "ko" to "연도"
+    ),
+    "tag_track_number" to mapOf(
+        "tr" to "Parça no", "en" to "Track no",
+        "es" to "N.º de pista", "fr" to "N° de piste",
+        "de" to "Titelnummer", "it" to "N. traccia",
+        "pt" to "N.º da faixa", "ru" to "Номер трека",
+        "ja" to "トラック番号", "zh" to "音轨号",
+        "ar" to "رقم المقطع", "ko" to "트랙 번호"
+    ),
 )
 
 fun Strings.dt(key: String): String {

@@ -44,6 +44,9 @@ dependencies {
     implementation("org.bytedeco:ffmpeg:7.1-1.5.11")
     runtimeOnly("org.bytedeco:ffmpeg:7.1-1.5.11:windows-x86_64")
 
+    // Etiket (ID3/Vorbis/MP4) okuma ve yazma.
+    implementation("net.jthink:jaudiotagger:3.0.1")
+
     testImplementation(kotlin("test"))
 }
 

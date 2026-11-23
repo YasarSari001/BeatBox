@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.FilterList
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Image
@@ -198,6 +199,7 @@ private fun BeatBoxDesktop(
     var sleepRemaining by remember { mutableStateOf(0L) }
     var viewingPhoto by remember { mutableStateOf<Track?>(null) }
     var playingVideo by remember { mutableStateOf<Track?>(null) }
+    var editingTrack by remember { mutableStateOf<Track?>(null) }
 
     val visible = remember(tracks, query, sortByDate, filter) {
         val needle = query.trim()
@@ -460,6 +462,7 @@ private fun BeatBoxDesktop(
                                 prefs.putBoolean("sort_by_date", it)
                             },
                             onOpen = { openMedia(it) },
+                            onEdit = { editingTrack = it },
                             onChooseFolder = { chooseFolder() },
                         )
 
@@ -572,6 +575,21 @@ private fun BeatBoxDesktop(
                 photos = photoTracks,
                 onClose = { viewingPhoto = null },
                 onNavigate = { viewingPhoto = it },
+            )
+        }
+
+        editingTrack?.let { track ->
+            TagEditorDialog(
+                strings = strings,
+                track = track,
+                onDismiss = { editingTrack = null },
+                onSaved = { updated ->
+                    tracks = tracks.map { item ->
+                        if (item.file == updated.file) updated else item
+                    }
+                    if (current?.file == updated.file) current = updated
+                    editingTrack = null
+                },
             )
         }
     }
@@ -861,6 +879,7 @@ private fun LibraryPage(
     sortByDate: Boolean,
     onSortChange: (Boolean) -> Unit,
     onOpen: (Track) -> Unit,
+    onEdit: (Track) -> Unit,
     onChooseFolder: () -> Unit,
 ) {
     if (tracks.isEmpty()) {
@@ -940,6 +959,7 @@ private fun LibraryPage(
                         isCurrent = track == current,
                         isPlaying = isPlaying && track == current,
                         onClick = { onOpen(track) },
+                        onEdit = if (track.kind == MediaKind.AUDIO) { { onEdit(track) } } else null,
                     )
                 }
             }
@@ -1024,6 +1044,7 @@ private fun TrackRow(
     isCurrent: Boolean,
     isPlaying: Boolean,
     onClick: () -> Unit,
+    onEdit: (() -> Unit)? = null,
 ) {
     val icon: ImageVector = when (track.kind) {
         MediaKind.AUDIO -> if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow
@@ -1080,6 +1101,17 @@ private fun TrackRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+        }
+        if (onEdit != null && track.kind == MediaKind.AUDIO) {
+            IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    Icons.Rounded.Edit,
+                    contentDescription = strings.get("edit"),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+            Spacer(Modifier.width(6.dp))
         }
         Text(
             text = trailing,

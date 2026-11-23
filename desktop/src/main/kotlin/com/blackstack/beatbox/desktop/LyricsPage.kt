@@ -81,7 +81,7 @@ fun LyricsPage(
             LyricsRequest(
                 title = current.title,
                 artist = current.artist,
-                album = "",
+                album = current.album,
                 durationSeconds = current.durationSeconds,
                 file = current.file,
             ),
