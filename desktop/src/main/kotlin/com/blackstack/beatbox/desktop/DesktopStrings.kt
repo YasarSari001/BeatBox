@@ -259,6 +259,82 @@ private val desktopStrings: Map<String, Map<String, String>> = mapOf(
         "ja" to "日付順", "zh" to "按日期",
         "ar" to "حسب التاريخ", "ko" to "날짜순"
     ),
+    "lyrics" to mapOf(
+        "tr" to "Sözler", "en" to "Lyrics",
+        "es" to "Letras", "fr" to "Paroles",
+        "de" to "Songtext", "it" to "Testi",
+        "pt" to "Letras", "ru" to "Текст песни",
+        "ja" to "歌詞", "zh" to "歌词",
+        "ar" to "كلمات الأغنية", "ko" to "가사"
+    ),
+    "lyrics_source" to mapOf(
+        "tr" to "Kaynak", "en" to "Source",
+        "es" to "Fuente", "fr" to "Source",
+        "de" to "Quelle", "it" to "Fonte",
+        "pt" to "Fonte", "ru" to "Источник",
+        "ja" to "提供元", "zh" to "来源",
+        "ar" to "المصدر", "ko" to "출처"
+    ),
+    "lyrics_refresh" to mapOf(
+        "tr" to "Sözleri yenile", "en" to "Refresh lyrics",
+        "es" to "Actualizar letras", "fr" to "Actualiser les paroles",
+        "de" to "Songtext aktualisieren", "it" to "Aggiorna testi",
+        "pt" to "Atualizar letras", "ru" to "Обновить текст",
+        "ja" to "歌詞を更新", "zh" to "刷新歌词",
+        "ar" to "تحديث الكلمات", "ko" to "가사 새로고침"
+    ),
+    "lyrics_find_hint" to mapOf(
+        "tr" to "Bir şarkı çalarken sözler burada görünür.", "en" to "Play a track to see its lyrics here.",
+        "es" to "Reproduce una pista para ver su letra aquí.", "fr" to "Lancez un titre pour voir ses paroles ici.",
+        "de" to "Spiele einen Titel ab, um hier den Songtext zu sehen.", "it" to "Riproduci un brano per vedere qui il testo.",
+        "pt" to "Reproduza uma faixa para ver a letra aqui.", "ru" to "Включите трек, чтобы увидеть здесь текст песни.",
+        "ja" to "曲を再生するとここに歌詞が表示されます。", "zh" to "播放歌曲即可在此查看歌词。",
+        "ar" to "شغّل أغنية لعرض كلماتها هنا.", "ko" to "곡을 재생하면 여기에 가사가 표시됩니다."
+    ),
+    "lyrics_loading" to mapOf(
+        "tr" to "Sözler yükleniyor…", "en" to "Loading lyrics…",
+        "es" to "Cargando letras…", "fr" to "Chargement des paroles…",
+        "de" to "Songtext wird geladen…", "it" to "Caricamento dei testi…",
+        "pt" to "Carregando letras…", "ru" to "Загрузка текста…",
+        "ja" to "歌詞を読み込み中…", "zh" to "正在加载歌词…",
+        "ar" to "جارٍ تحميل الكلمات…", "ko" to "가사를 불러오는 중…"
+    ),
+    "lyrics_not_found" to mapOf(
+        "tr" to "Bu şarkı için söz bulunamadı.", "en" to "No lyrics found for this song.",
+        "es" to "No se encontraron letras para esta canción.", "fr" to "Aucune parole trouvée pour ce titre.",
+        "de" to "Für diesen Titel wurde kein Songtext gefunden.", "it" to "Nessun testo trovato per questo brano.",
+        "pt" to "Nenhuma letra encontrada para esta música.", "ru" to "Для этой песни текст не найден.",
+        "ja" to "この曲の歌詞は見つかりませんでした。", "zh" to "未找到这首歌的歌词。",
+        "ar" to "لم يتم العثور على كلمات لهذه الأغنية.", "ko" to "이 곡의 가사를 찾을 수 없습니다."
+    ),
+    "lyrics_network_error" to mapOf(
+        "tr" to "Sözlere ulaşılamadı. İnternet bağlantınızı kontrol edin.",
+        "en" to "Couldn't reach the lyrics service. Check your connection.",
+        "es" to "No se pudo conectar con el servicio de letras. Comprueba tu conexión.",
+        "fr" to "Impossible de joindre le service de paroles. Vérifiez votre connexion.",
+        "de" to "Songtext-Dienst nicht erreichbar. Prüfe deine Verbindung.",
+        "it" to "Impossibile raggiungere il servizio dei testi. Controlla la connessione.",
+        "pt" to "Não foi possível acessar o serviço de letras. Verifique sua conexão.",
+        "ru" to "Не удалось подключиться к сервису текстов. Проверьте соединение.",
+        "ja" to "歌詞サービスに接続できませんでした。接続を確認してください。",
+        "zh" to "无法连接歌词服务，请检查网络连接。",
+        "ar" to "تعذّر الوصول إلى خدمة الكلمات. تحقّق من اتصالك.",
+        "ko" to "가사 서비스에 연결할 수 없습니다. 연결을 확인하세요."
+    ),
+    "lyrics_unsynced" to mapOf(
+        "tr" to "Zaman damgası yok — düz metin olarak gösteriliyor.",
+        "en" to "No timestamps — showing plain text.",
+        "es" to "Sin marcas de tiempo: se muestra como texto plano.",
+        "fr" to "Pas d'horodatage — affichage en texte brut.",
+        "de" to "Keine Zeitstempel – als reiner Text angezeigt.",
+        "it" to "Nessun timestamp: mostrato come testo semplice.",
+        "pt" to "Sem carimbos de tempo — exibindo texto simples.",
+        "ru" to "Нет временных меток — показан обычный текст.",
+        "ja" to "タイムスタンプなし — プレーンテキストで表示中。",
+        "zh" to "无时间戳——以纯文本显示。",
+        "ar" to "لا توجد طوابع زمنية — يُعرض كنص عادي.",
+        "ko" to "타임스탬프 없음 — 일반 텍스트로 표시 중."
+    ),
 )
 
 fun Strings.dt(key: String): String {

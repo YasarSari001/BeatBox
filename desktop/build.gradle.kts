@@ -43,6 +43,8 @@ dependencies {
     implementation("org.bytedeco:javacpp:1.5.11")
     implementation("org.bytedeco:ffmpeg:7.1-1.5.11")
     runtimeOnly("org.bytedeco:ffmpeg:7.1-1.5.11:windows-x86_64")
+
+    testImplementation(kotlin("test"))
 }
 
 compose.desktop {

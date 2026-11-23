@@ -31,6 +31,7 @@ import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.LibraryMusic
+import androidx.compose.material.icons.rounded.Lyrics
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Pause
@@ -85,7 +86,7 @@ import java.util.Calendar
 import java.util.prefs.Preferences
 import javax.swing.JFileChooser
 
-private enum class Page { HOME, LIBRARY, SETTINGS }
+private enum class Page { HOME, LIBRARY, LYRICS, SETTINGS }
 
 fun main() = application {
     val prefs = remember { Preferences.userRoot().node("com/blackstack/beatbox/desktop") }
@@ -403,6 +404,13 @@ private fun BeatBoxDesktop(
                             onChooseFolder = { chooseFolder() },
                         )
 
+                        Page.LYRICS -> LyricsPage(
+                            strings = strings,
+                            track = current,
+                            positionSeconds = position,
+                            onSeek = { seconds -> current?.let { playTrack(it, seconds) } },
+                        )
+
                         Page.SETTINGS -> SettingsPage(
                             strings = strings,
                             language = language,
@@ -536,6 +544,7 @@ private fun NavRail(
 
         NavItem(strings.get("home"), Icons.Rounded.Home, page == Page.HOME) { onPageChange(Page.HOME) }
         NavItem(strings.get("library"), Icons.Rounded.LibraryMusic, page == Page.LIBRARY) { onPageChange(Page.LIBRARY) }
+        NavItem(strings.dt("lyrics"), Icons.Rounded.Lyrics, page == Page.LYRICS) { onPageChange(Page.LYRICS) }
         Spacer(Modifier.weight(1f))
         NavItem(strings.get("settings"), Icons.Rounded.Settings, page == Page.SETTINGS) { onPageChange(Page.SETTINGS) }
     }
@@ -591,6 +600,7 @@ private fun HeaderBar(
                 text = when (page) {
                     Page.HOME -> strings.get("app_name")
                     Page.LIBRARY -> strings.get("library")
+                    Page.LYRICS -> strings.dt("lyrics")
                     Page.SETTINGS -> strings.get("settings")
                 },
                 fontSize = 24.sp,
