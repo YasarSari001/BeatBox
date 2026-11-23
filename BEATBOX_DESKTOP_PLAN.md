@@ -22,7 +22,7 @@
 - [ ] Karıştır (shuffle) / Tekrar (repeat) modları
 - [ ] Oynatma kuyruğu (queue) görünümü
 - [ ] Pencere boyutu hatırlama (son boyutu kaydet, açışta uygula)
-- [ ] Sistem tepsi (tray): kapatınca arka plana indirme
+- [x] Sistem tepsi (tray): kapatınca arka plana indirme — 2026-11-23
 
 ### Aşama 2 — Ses Kalitesi ve Kütüphane (1-2 ay)
 - [ ] Gapless oynatma (parçalar arası sessiz yok)
@@ -73,3 +73,16 @@
 - `LRCParserTest.kt`: 9 birim testi (Gradle `:desktop:test` yeşil).
 - Metrolist kaynaklı dosyalara GPL-3.0 uyarlama başlıkları eklendi.
 - Canlı LRCLIB denemesi: "Daft Punk – Get Lucky" → 112 satır senkronize söz.
+
+### 2026-11-23 — Sistem tepsisi ✅
+- `DesktopTray.kt`: `ApplicationScope.BeatBoxTray` — 32×32 kodla çizilen nota
+  simgesi (ek görsel dosyası yok), araç ipucu ve menü: göster, çal/duraklat,
+  önceki, sonraki, çıkış.
+- `TrayController`: tepsi menüsü ile pencere durumu arasında köprü; dil ve
+  çalma durumu anlık yansıtılır.
+- Kapat düğmesi artık varsayılan olarak pencereyi gizler (müzik devam eder).
+- `SettingsPage`: "Kapatınca sistem tepsisinde kal" anahtarı; tercih
+  `close_to_tray` olarak saklanır.
+- 4 yeni metin anahtarı × 12 dil.
+- `:desktop:compileKotlin` ve `:desktop:test` yeşil; uygulama 30 sn çalıştırılıp
+  çökmediği doğrulandı.

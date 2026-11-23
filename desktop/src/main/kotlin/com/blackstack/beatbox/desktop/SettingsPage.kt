@@ -23,6 +23,7 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.Minimize
 import androidx.compose.material.icons.rounded.Nightlight
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Refresh
@@ -61,6 +62,8 @@ fun SettingsPage(
     onThemeChange: (DesktopTheme) -> Unit,
     visualizerEnabled: Boolean,
     onVisualizerChange: (Boolean) -> Unit,
+    closeToTray: Boolean,
+    onCloseToTrayChange: (Boolean) -> Unit,
     eqPreset: EQPreset,
     onEqPresetChange: (EQPreset) -> Unit,
     volume: Float,
@@ -136,6 +139,14 @@ fun SettingsPage(
                 subtitle = strings.dt("visualizer_desc"),
             ) {
                 Switch(checked = visualizerEnabled, onCheckedChange = onVisualizerChange)
+            }
+            SettingsDivider()
+            SettingsRow(
+                icon = Icons.Rounded.Minimize,
+                title = strings.dt("close_to_tray"),
+                subtitle = strings.dt("close_to_tray_desc"),
+            ) {
+                Switch(checked = closeToTray, onCheckedChange = onCloseToTrayChange)
             }
         }
 

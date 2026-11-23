@@ -58,6 +58,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -94,6 +95,22 @@ fun main() = application {
     var theme by remember { mutableStateOf(loadTheme(prefs)) }
 
     var nowPlayingVisible by remember { mutableStateOf(prefs.getBoolean("now_playing_visible", true)) }
+    var closeToTray by remember { mutableStateOf(prefs.getBoolean("close_to_tray", true)) }
+    var windowVisible by remember { mutableStateOf(true) }
+    val trayController = remember { TrayController() }
+
+    fun quit() {
+        prefs.putBoolean("now_playing_visible", nowPlayingVisible)
+        prefs.putBoolean("close_to_tray", closeToTray)
+        engine.stop()
+        exitApplication()
+    }
+
+    BeatBoxTray(
+        controller = trayController,
+        onShow = { windowVisible = true },
+        onExit = { quit() },
+    )
 
     val savedWidth = prefs.getInt("window_width", 1320)
     val savedHeight = prefs.getInt("window_height", 840)
@@ -101,18 +118,33 @@ fun main() = application {
 
     Window(
         onCloseRequest = {
-            prefs.putBoolean("now_playing_visible", nowPlayingVisible)
-            engine.stop()
-            exitApplication()
+            if (closeToTray) {
+                prefs.putBoolean("close_to_tray", true)
+                windowVisible = false
+            } else {
+                quit()
+            }
         },
+        visible = windowVisible,
         title = "BeatBox",
         state = windowState
     ) {
         MaterialTheme(colorScheme = DesktopColorScheme(theme)) {
-            BeatBoxDesktop(engine, prefs, theme) { updated ->
-                theme = updated
-                saveTheme(prefs, updated)
-            }
+            BeatBoxDesktop(
+                engine = engine,
+                prefs = prefs,
+                theme = theme,
+                onThemeChange = { updated ->
+                    theme = updated
+                    saveTheme(prefs, updated)
+                },
+                trayController = trayController,
+                closeToTray = closeToTray,
+                onCloseToTrayChange = { enabled ->
+                    closeToTray = enabled
+                    prefs.putBoolean("close_to_tray", enabled)
+                },
+            )
         }
     }
 }
@@ -123,6 +155,9 @@ private fun BeatBoxDesktop(
     prefs: Preferences,
     theme: DesktopTheme,
     onThemeChange: (DesktopTheme) -> Unit,
+    trayController: TrayController,
+    closeToTray: Boolean,
+    onCloseToTrayChange: (Boolean) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val videoEngine = remember { VideoEngine() }
@@ -238,6 +273,30 @@ private fun BeatBoxDesktop(
         prefs.put("folder", picked.absolutePath)
         folder = picked
         loadFolder(picked)
+    }
+
+    SideEffect {
+        trayController.strings = strings
+        trayController.isPlaying = isPlaying
+        trayController.title = current?.let { track ->
+            listOf(track.title, track.artist)
+                .filter { it.isNotBlank() }
+                .joinToString(" — ")
+                .ifBlank { track.file.name }
+        }
+        trayController.onTogglePlay = {
+            if (current == null) {
+                visible.firstOrNull { it.kind == MediaKind.AUDIO }?.let { playTrack(it) }
+            } else if (isPlaying) {
+                engine.pause()
+                isPlaying = false
+            } else {
+                engine.resume()
+                isPlaying = true
+            }
+        }
+        trayController.onNext = { step(1) }
+        trayController.onPrevious = { step(-1) }
     }
 
     val visibleNow by rememberUpdatedState(visible)
@@ -425,6 +484,8 @@ private fun BeatBoxDesktop(
                                 visualizerEnabled = it
                                 prefs.putBoolean("visualizer", it)
                             },
+                            closeToTray = closeToTray,
+                            onCloseToTrayChange = onCloseToTrayChange,
                             eqPreset = eqPreset,
                             onEqPresetChange = {
                                 eqPreset = it

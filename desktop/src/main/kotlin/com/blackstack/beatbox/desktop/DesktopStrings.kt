@@ -335,6 +335,50 @@ private val desktopStrings: Map<String, Map<String, String>> = mapOf(
         "ar" to "لا توجد طوابع زمنية — يُعرض كنص عادي.",
         "ko" to "타임스탬프 없음 — 일반 텍스트로 표시 중."
     ),
+    "tray_show" to mapOf(
+        "tr" to "BeatBox'ı göster", "en" to "Show BeatBox",
+        "es" to "Mostrar BeatBox", "fr" to "Afficher BeatBox",
+        "de" to "BeatBox anzeigen", "it" to "Mostra BeatBox",
+        "pt" to "Mostrar BeatBox", "ru" to "Показать BeatBox",
+        "ja" to "BeatBoxを表示", "zh" to "显示 BeatBox",
+        "ar" to "إظهار BeatBox", "ko" to "BeatBox 표시"
+    ),
+    "tray_exit" to mapOf(
+        "tr" to "Çıkış", "en" to "Exit",
+        "es" to "Salir", "fr" to "Quitter",
+        "de" to "Beenden", "it" to "Esci",
+        "pt" to "Sair", "ru" to "Выход",
+        "ja" to "終了", "zh" to "退出",
+        "ar" to "خروج", "ko" to "종료"
+    ),
+    "close_to_tray" to mapOf(
+        "tr" to "Kapatınca sistem tepsisinde kal",
+        "en" to "Keep running in the system tray when closed",
+        "es" to "Seguir en la bandeja del sistema al cerrar",
+        "fr" to "Rester dans la zone de notification à la fermeture",
+        "de" to "Beim Schließen im Infobereich bleiben",
+        "it" to "Resta nella barra delle applicazioni alla chiusura",
+        "pt" to "Continuar na bandeja do sistema ao fechar",
+        "ru" to "Оставаться в трее при закрытии",
+        "ja" to "閉じてもタスクトレイに残す",
+        "zh" to "关闭后保留在系统托盘",
+        "ar" to "البقاء في شريط النظام عند الإغلاق",
+        "ko" to "닫아도 시스템 트레이에 유지"
+    ),
+    "close_to_tray_desc" to mapOf(
+        "tr" to "Kapat düğmesi pencereyi gizler; müzik çalmaya devam eder.",
+        "en" to "The close button hides the window and playback keeps going.",
+        "es" to "El botón cerrar oculta la ventana y la reproducción continúa.",
+        "fr" to "Le bouton Fermer masque la fenêtre et la lecture continue.",
+        "de" to "Die Schaltfläche „Schließen“ blendet das Fenster aus, die Wiedergabe läuft weiter.",
+        "it" to "Il pulsante Chiudi nasconde la finestra e la riproduzione continua.",
+        "pt" to "O botão fechar oculta a janela e a reprodução continua.",
+        "ru" to "Кнопка закрытия скрывает окно, воспроизведение продолжается.",
+        "ja" to "閉じるボタンはウィンドウを隠し、再生は続きます。",
+        "zh" to "关闭按钮会隐藏窗口，播放继续进行。",
+        "ar" to "زر الإغلاق يخفي النافذة ويستمر التشغيل.",
+        "ko" to "닫기 버튼은 창을 숨기고 재생은 계속됩니다."
+    ),
 )
 
 fun Strings.dt(key: String): String {
