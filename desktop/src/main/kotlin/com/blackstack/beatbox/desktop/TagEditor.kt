@@ -4,6 +4,7 @@ import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.tag.FieldKey
 import org.jaudiotagger.tag.Tag
 import java.io.File
+import kotlin.math.pow
 
 /**
  * Kullanıcı tarafından düzenlenebilen etiket alanları.
@@ -27,6 +28,26 @@ data class EditableTags(
  * döner ve kullanıcıya hata gösterilir.
  */
 object TagEditor {
+
+    /** ReplayGain parça kazancı (dB); etiket yoksa `null`. */
+    fun replayGainDb(file: File): Float? = runCatching {
+        val tag = AudioFileIO.read(file).tag ?: return@runCatching null
+        val identifiers = listOf(
+            "TXXX:REPLAYGAIN_TRACK_GAIN",
+            "REPLAYGAIN_TRACK_GAIN",
+            "TXXX:REPLAYGAIN_ALBUM_GAIN",
+            "REPLAYGAIN_ALBUM_GAIN",
+        )
+        val raw = identifiers.firstNotNullOfOrNull { key ->
+            runCatching { tag.getFirst(key)?.takeIf { it.isNotBlank() } }.getOrNull()
+        } ?: return@runCatching null
+        val match = Regex("""(-?\d+(?:[.,]\d+)?)""").find(raw) ?: return@runCatching null
+        match.groupValues[1].replace(',', '.').toFloatOrNull()
+    }.getOrNull()
+
+    /** dB cinsinden kazancı PCM çarpanına çevirir (0,25× – 4× arası). */
+    fun gainMultiplier(db: Float?): Float =
+        if (db == null) 1f else (10.0.pow(db / 20.0)).toFloat().coerceIn(0.25f, 4f)
 
     /** Dosyadaki etiketleri okur; okunamazsa `null`. */
     fun read(file: File): EditableTags? = runCatching {

@@ -25,11 +25,11 @@
 - [x] Sistem tepsi (tray): kapatınca arka plana indirme — 2026-11-23
 
 ### Aşama 2 — Ses Kalitesi ve Kütüphane (1-2 ay)
-- [ ] Gapless oynatma (parçalar arası sessiz yok)
-- [ ] Crossfade (parça geçişi)
-- [ ] ReplayGain / ses normalizasyonu
+- [x] Gapless oynatma (parçalar arası sessiz yok) — 2026-11-23
+- [x] Crossfade (parça geçişi) — 2026-11-23
+- [x] ReplayGain / ses normalizasyonu — 2026-11-23
 - [x] Etiket (tag) düzenleme: başlık, sanatçı, albüm, tür, yıl, parça no — 2026-11-23
-- [ ] Albüm sanatı görünümü (kütüphede kare izgara)
+- [x] Albüm sanatı görünümü (kütüphane kare ızgarası) — 2026-11-23
 
 ### Aşama 3 — Telefon (APK) ile Tam Uyum (2-3 ay)
 - [x] Mini player (çalma sırasında küçük çubuk) — 2026-11-23
@@ -120,3 +120,19 @@
 - `now_playing_visible` tercihi artık açılışta okunuyor ve her değişimde
   yazılıyor (önce içeride her zaman `true` ile başlıyordu).
 - 1 metin anahtarı × 12 dil; `:desktop:compileKotlin` ve `:desktop:test` yeşil.
+
+### 2026-11-23 — Aşama 2: ses kalitesi ve albüm ızgarası ✅
+- `AudioEngine`: tek `SourceDataLine` üzerinde çalışan crossfade/gapless motoru.
+  Sıradaki parça motorla önceden paylaşılır (`prepareNext`); bitişten önce
+  ikinci PCM akışı açılır, eşit güç (cos/sin) yasasıyla karıştırılır ve
+  `onTrackChange` ile UI'ya haber verilir. Crossfade 0 ise line kapatılmadan
+  akış değiştirilir (gapless).
+- `ReplayGain`: `TagEditor.replayGainDb()` TXXX/vorbis etiketlerini okur,
+  dB → çarpan dönüşümü 0,25×–4× aralığında sınırlandırılır ve PCM'ye uygulanır.
+- `SettingsPage`: geçiş süresi (0/2/4/6 sn, 0 = boşluksuz) ve ReplayGain
+  anahtarı; tercihler `crossfade_seconds` / `replay_gain`.
+- `AlbumArt.kt` + `AlbumsPage.kt`: gömülü JPEG/PNG kapaklarını önbelleğe alıp
+  kare ızgarada gösterir; albüme tıklayınca kütüphane o albüme filtrelenir.
+- 8 metin anahtarı × 12 dil. `:desktop:test` yeşil; 1,1 sn'lik iki üretilmiş
+  WAV ile yapılan geçiş denemesinde ikinci parçaya sorunsuz geçildiği
+  doğrulandı (deneme dosyası kalıcı testlere alınmadı).

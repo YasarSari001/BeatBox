@@ -515,6 +515,80 @@ private val desktopStrings: Map<String, Map<String, String>> = mapOf(
         "ja" to "フルプレーヤーを表示", "zh" to "显示完整播放器",
         "ar" to "إظهار المشغّل الكامل", "ko" to "전체 플레이어 표시"
     ),
+    "crossfade" to mapOf(
+        "tr" to "Parça geçişi", "en" to "Crossfade",
+        "es" to "Fundido", "fr" to "Fondu enchaîné",
+        "de" to "Überblenden", "it" to "Dissolvenza",
+        "pt" to "Transição", "ru" to "Плавный переход",
+        "ja" to "クロスフェード", "zh" to "淡入淡出",
+        "ar" to "انتقال تدريجي", "ko" to "크로스페이드"
+    ),
+    "crossfade_desc" to mapOf(
+        "tr" to "Parçalar arasındaki örtüşme süresi; 0 = boşluksuz.",
+        "en" to "Overlap between tracks; 0 = gapless.",
+        "es" to "Superposición entre pistas; 0 = sin pausas.",
+        "fr" to "Chevauchement entre les titres ; 0 = sans silence.",
+        "de" to "Überlappung zwischen Titeln; 0 = lückenlos.",
+        "it" to "Sovrapposizione tra brani; 0 = senza vuoti.",
+        "pt" to "Sobreposição entre faixas; 0 = sem pausas.",
+        "ru" to "Перекрытие между треками; 0 = без пауз.",
+        "ja" to "曲間の重なり時間。0 はギャップレス。",
+        "zh" to "歌曲重叠时长；0 为无缝播放。",
+        "ar" to "مدة التداخل بين المقطعات؛ 0 = بدون فجوة.",
+        "ko" to "곡 간 겹침 시간; 0 = 갭리스."
+    ),
+    "crossfade_value" to mapOf(
+        "tr" to "%d sn", "en" to "%d s",
+        "es" to "%d s", "fr" to "%d s",
+        "de" to "%d s", "it" to "%d s",
+        "pt" to "%d s", "ru" to "%d с",
+        "ja" to "%d 秒", "zh" to "%d 秒",
+        "ar" to "%d ث", "ko" to "%d초"
+    ),
+    "gapless" to mapOf(
+        "tr" to "Boşluksuz", "en" to "Gapless",
+        "es" to "Sin pausas", "fr" to "Sans silence",
+        "de" to "Lückenlos", "it" to "Senza vuoti",
+        "pt" to "Sem pausas", "ru" to "Без пауз",
+        "ja" to "ギャップレス", "zh" to "无缝",
+        "ar" to "بدون فجوة", "ko" to "갭리스"
+    ),
+    "replay_gain" to mapOf(
+        "tr" to "ReplayGain", "en" to "ReplayGain",
+        "es" to "ReplayGain", "fr" to "ReplayGain",
+        "de" to "ReplayGain", "it" to "ReplayGain",
+        "pt" to "ReplayGain", "ru" to "ReplayGain",
+        "ja" to "ReplayGain", "zh" to "ReplayGain",
+        "ar" to "ReplayGain", "ko" to "ReplayGain"
+    ),
+    "replay_gain_desc" to mapOf(
+        "tr" to "Ses seviyesini etiketteki ReplayGain değerine göre ayarlar.",
+        "en" to "Adjusts volume using the ReplayGain value stored in the tag.",
+        "es" to "Ajusta el volumen según el valor ReplayGain de la etiqueta.",
+        "fr" to "Ajuste le volume selon la valeur ReplayGain de l'étiquette.",
+        "de" to "Passt die Lautstärke anhand des ReplayGain-Werts im Tag an.",
+        "it" to "Regola il volume in base al valore ReplayGain nel tag.",
+        "pt" to "Ajusta o volume conforme o valor ReplayGain na etiqueta.",
+        "ru" to "Регулирует громкость по значению ReplayGain в теге.",
+        "ja" to "タグの ReplayGain 値に基づいて音量を調整します。",
+        "zh" to "根据标签中的 ReplayGain 值调整音量。",
+        "ar" to "يضبط مستوى الصوت وفق قيمة ReplayGain في الوسم.",
+        "ko" to "태그의 ReplayGain 값에 따라 볼륨을 조절합니다."
+    ),
+    "albums_empty" to mapOf(
+        "tr" to "Henüz albüm yok. Şarkılarınıza albüm etiketi ekleyin.",
+        "en" to "No albums yet. Add an album tag to your songs.",
+        "es" to "Todavía no hay álbumes. Añade una etiqueta de álbum a tus canciones.",
+        "fr" to "Aucun album pour l'instant. Ajoutez une étiquette d'album à vos titres.",
+        "de" to "Noch keine Alben. Füge deinen Liedern ein Album-Tag hinzu.",
+        "it" to "Nessun album. Aggiungi un tag album ai tuoi brani.",
+        "pt" to "Ainda não há álbuns. Adicione uma etiqueta de álbum às suas músicas.",
+        "ru" to "Альбомов пока нет. Добавьте тег альбома к песням.",
+        "ja" to "アルバムはまだありません。曲にアルバムタグを追加してください。",
+        "zh" to "暂无专辑。请为歌曲添加专辑标签。",
+        "ar" to "لا توجد ألبومات بعد. أضف وسم ألبوم إلى أغانيك.",
+        "ko" to "앨범이 없습니다. 곡에 앨범 태그를 추가하세요."
+    ),
 )
 
 fun Strings.dt(key: String): String {

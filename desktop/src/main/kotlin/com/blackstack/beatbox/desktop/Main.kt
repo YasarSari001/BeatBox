@@ -27,6 +27,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.FolderOpen
@@ -98,13 +99,29 @@ import java.util.Calendar
 import java.util.prefs.Preferences
 import javax.swing.JFileChooser
 
-private enum class Page { HOME, LIBRARY, QUEUE, LYRICS, SETTINGS }
+private enum class Page { HOME, LIBRARY, ALBUMS, QUEUE, LYRICS, SETTINGS }
 
 /** Tekrar modu: kapalı, tüm listeyi döngüye al, şarkıyı tekrarla. */
 private enum class RepeatMode {
     OFF, ALL, ONE;
 
     fun next(): RepeatMode = entries[(ordinal + 1) % entries.size]
+}
+
+/** Sıradaki parçayı motora önceden bildirir (crossfade/gapless için). */
+private fun prepareFollowing(
+    engine: AudioEngine,
+    track: Track,
+    list: List<Track>,
+    shuffled: Boolean,
+    repeat: RepeatMode,
+) {
+    val next = if (repeat == RepeatMode.ONE) {
+        null
+    } else {
+        pickTrack(track, list, shuffled, repeat, forward = true, automatic = true)
+    }
+    engine.prepareNext(next?.file, next?.durationSeconds ?: 0.0)
 }
 
 /** Shuffle/repeat kurallarına göre sıradaki (veya önceki) parçayı seçer. */
@@ -259,7 +276,10 @@ private fun BeatBoxDesktop(
         )
     }
     var searchFocused by remember { mutableStateOf(false) }
+    var albumFilter by remember { mutableStateOf<String?>(null) }
     var queue by remember { mutableStateOf<List<Track>>(emptyList()) }
+    var crossfadeSeconds by remember { mutableStateOf(prefs.getFloat("crossfade_seconds", 0f)) }
+    var replayGain by remember { mutableStateOf(prefs.getBoolean("replay_gain", false)) }
     var tracks by remember { mutableStateOf<List<Track>>(emptyList()) }
     var scanning by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
@@ -288,10 +308,14 @@ private fun BeatBoxDesktop(
     var playingVideo by remember { mutableStateOf<Track?>(null) }
     var editingTrack by remember { mutableStateOf<Track?>(null) }
 
-    val visible = remember(tracks, query, sortByDate, filter) {
+    val albumName: (Track) -> String = { track ->
+        track.album.ifBlank { track.folderName }.ifBlank { strings.get("unknown_album") }
+    }
+    val visible = remember(tracks, query, sortByDate, filter, albumFilter, strings) {
         val needle = query.trim()
         val filtered = tracks.filter {
             (filter == null || it.kind == filter) &&
+                (albumFilter == null || albumName(it) == albumFilter) &&
                 (needle.isEmpty() ||
                     it.title.contains(needle, ignoreCase = true) ||
                     it.artist.contains(needle, ignoreCase = true))
@@ -300,6 +324,17 @@ private fun BeatBoxDesktop(
         else filtered.sortedWith(compareBy({ it.artist.lowercase() }, { it.title.lowercase() }))
     }
     val audioTracks = remember(tracks) { tracks.filter { it.kind == MediaKind.AUDIO } }
+    val albums = remember(audioTracks, strings) {
+        audioTracks.groupBy(albumName).map { (key, group) ->
+            AlbumGroup(
+                key = key,
+                title = key,
+                artist = group.firstOrNull()?.artist?.takeIf { it.isNotBlank() }
+                    ?: strings.get("artist"),
+                tracks = group,
+            )
+        }.sortedBy { it.title.lowercase() }
+    }
     val photoTracks = remember(tracks) { tracks.filter { it.kind == MediaKind.IMAGE } }
     val totalSeconds = remember(audioTracks) { audioTracks.sumOf { it.durationSeconds } }
 
@@ -310,7 +345,14 @@ private fun BeatBoxDesktop(
         duration = track.durationSeconds
         engine.setVolume(volume)
         engine.setEqPreset(eqPreset)
-        engine.play(track.file, from)
+        engine.play(track.file, from, track.durationSeconds)
+        prepareFollowing(
+            engine = engine,
+            track = track,
+            list = queue.ifEmpty { visible.filter { it.kind == MediaKind.AUDIO } },
+            shuffled = shuffle,
+            repeat = repeatMode,
+        )
         isPlaying = true
     }
 
@@ -420,10 +462,22 @@ private fun BeatBoxDesktop(
                 duration = nextTrack.durationSeconds
                 engine.setVolume(volumeNow)
                 engine.setEqPreset(eqNow)
-                engine.play(nextTrack.file)
+                engine.play(nextTrack.file, 0.0, nextTrack.durationSeconds)
+                prepareFollowing(engine, nextTrack, list, shuffleNow, repeatNow)
             } else {
                 isPlaying = false
                 position = 0.0
+            }
+        }
+        engine.onTrackChange = { file, startedAt ->
+            val list = queueNow.ifEmpty { visibleNow.filter { it.kind == MediaKind.AUDIO } }
+            val track = list.firstOrNull { it.file == file }
+            if (track != null) {
+                error = null
+                current = track
+                position = startedAt
+                duration = track.durationSeconds
+                prepareFollowing(engine, track, list, shuffleNow, repeatNow)
             }
         }
         engine.onError = { message ->
@@ -433,6 +487,7 @@ private fun BeatBoxDesktop(
         onDispose {
             engine.onCompleted = null
             engine.onError = null
+            engine.onTrackChange = null
             engine.stop()
         }
     }
@@ -444,7 +499,15 @@ private fun BeatBoxDesktop(
         }
     }
 
+    LaunchedEffect(crossfadeSeconds, replayGain) {
+        engine.crossfadeSeconds = crossfadeSeconds
+        engine.replayGainEnabled = replayGain
+        prefs.putFloat("crossfade_seconds", crossfadeSeconds)
+        prefs.putBoolean("replay_gain", replayGain)
+    }
+
     LaunchedEffect(Unit) {
+        engine.replayGainProvider = { file -> TagEditor.replayGainDb(file) }
         engine.setVolume(volume)
         engine.setEqPreset(eqPreset)
         folder?.let { loadFolder(it) }
@@ -504,6 +567,16 @@ private fun BeatBoxDesktop(
                         prefs.putBoolean("now_playing_visible", nowPlayingVisible)
                     }
                 )
+
+                albumFilter?.let { selected ->
+                    Row(modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)) {
+                        FilterChip(
+                            label = "${strings.dt("tag_album")}: $selected  ×",
+                            selected = true,
+                            onClick = { albumFilter = null },
+                        )
+                    }
+                }
 
                 if (scanning) {
                     LinearProgressIndicator(
@@ -578,6 +651,15 @@ private fun BeatBoxDesktop(
                             onChooseFolder = { chooseFolder() },
                         )
 
+                        Page.ALBUMS -> AlbumsPage(
+                            strings = strings,
+                            albums = albums,
+                            onOpen = { group ->
+                                albumFilter = group.key
+                                page = Page.LIBRARY
+                            },
+                        )
+
                         Page.QUEUE -> QueuePage(
                             strings = strings,
                             queue = queue,
@@ -611,6 +693,10 @@ private fun BeatBoxDesktop(
                             },
                             closeToTray = closeToTray,
                             onCloseToTrayChange = onCloseToTrayChange,
+                            crossfadeSeconds = crossfadeSeconds,
+                            onCrossfadeChange = { crossfadeSeconds = it },
+                            replayGain = replayGain,
+                            onReplayGainChange = { replayGain = it },
                             eqPreset = eqPreset,
                             onEqPresetChange = {
                                 eqPreset = it
@@ -782,6 +868,7 @@ private fun NavRail(
 
         NavItem(strings.get("home"), Icons.Rounded.Home, page == Page.HOME) { onPageChange(Page.HOME) }
         NavItem(strings.get("library"), Icons.Rounded.LibraryMusic, page == Page.LIBRARY) { onPageChange(Page.LIBRARY) }
+        NavItem(strings.get("albums"), Icons.Rounded.Album, page == Page.ALBUMS) { onPageChange(Page.ALBUMS) }
         NavItem(strings.dt("queue"), Icons.Rounded.QueueMusic, page == Page.QUEUE) { onPageChange(Page.QUEUE) }
         NavItem(strings.dt("lyrics"), Icons.Rounded.Lyrics, page == Page.LYRICS) { onPageChange(Page.LYRICS) }
         Spacer(Modifier.weight(1f))
@@ -839,6 +926,7 @@ private fun HeaderBar(
                 text = when (page) {
                     Page.HOME -> strings.get("app_name")
                     Page.LIBRARY -> strings.get("library")
+                    Page.ALBUMS -> strings.get("albums")
                     Page.QUEUE -> strings.dt("queue")
                     Page.LYRICS -> strings.dt("lyrics")
                     Page.SETTINGS -> strings.get("settings")

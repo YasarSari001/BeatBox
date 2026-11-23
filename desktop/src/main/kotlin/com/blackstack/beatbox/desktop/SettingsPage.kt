@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Language
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.rounded.Nightlight
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -64,6 +66,10 @@ fun SettingsPage(
     onVisualizerChange: (Boolean) -> Unit,
     closeToTray: Boolean,
     onCloseToTrayChange: (Boolean) -> Unit,
+    crossfadeSeconds: Float,
+    onCrossfadeChange: (Float) -> Unit,
+    replayGain: Boolean,
+    onReplayGainChange: (Boolean) -> Unit,
     eqPreset: EQPreset,
     onEqPresetChange: (EQPreset) -> Unit,
     volume: Float,
@@ -151,6 +157,35 @@ fun SettingsPage(
         }
 
         SettingsGroup(strings.dt("playback_section")) {
+            SettingsRow(
+                icon = Icons.Rounded.GraphicEq,
+                title = strings.dt("crossfade"),
+                subtitle = strings.dt("crossfade_desc"),
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(0f, 2f, 4f, 6f).forEach { seconds ->
+                        val label = if (seconds == 0f) {
+                            strings.dt("gapless")
+                        } else {
+                            strings.dt("crossfade_value").format(seconds.toInt())
+                        }
+                        Chip(
+                            text = label,
+                            selected = crossfadeSeconds == seconds,
+                            onClick = { onCrossfadeChange(seconds) },
+                        )
+                    }
+                }
+            }
+            SettingsDivider()
+            SettingsRow(
+                icon = Icons.Rounded.VolumeUp,
+                title = strings.dt("replay_gain"),
+                subtitle = strings.dt("replay_gain_desc"),
+            ) {
+                Switch(checked = replayGain, onCheckedChange = onReplayGainChange)
+            }
+            SettingsDivider()
             SettingsRow(
                 icon = Icons.Rounded.Tune,
                 title = strings.get("equalizer"),

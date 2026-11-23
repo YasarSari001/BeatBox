@@ -44,6 +44,14 @@ class TagEditorTest {
     }
 
     @Test
+    fun `replay gain multiplier is clamped`() {
+        assertEquals(1f, TagEditor.gainMultiplier(null))
+        val quieter = TagEditor.gainMultiplier(-6f)
+        assertTrue(quieter in 0.49f..0.51f, "gain=$quieter")
+        assertEquals(4f, TagEditor.gainMultiplier(20f))
+    }
+
+    @Test
     fun `blank fields are removed`() {
         val file = File.createTempFile("beatbox-tag-clear-", ".wav")
         try {

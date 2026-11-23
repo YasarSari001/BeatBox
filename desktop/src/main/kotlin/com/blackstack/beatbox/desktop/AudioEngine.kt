@@ -33,6 +33,24 @@ class AudioEngine {
     @Volatile private var volume = 0.8f
     @Volatile private var eqPreset: EQPreset = EQPreset.NONE
     @Volatile private var currentChain: EqChain? = null
+    @Volatile private var currentGain = 1f
+    @Volatile private var nextGain = 1f
+    @Volatile private var trackDuration = 0.0
+
+    /** Parçalar arası geçiş süresi (saniye). 0 = boşluksuz (gapless) geçiş. */
+    @Volatile var crossfadeSeconds: Float = 0f
+
+    /** ReplayGain etiketlerini ses seviyesine uygula. */
+    @Volatile var replayGainEnabled: Boolean = false
+
+    /** ReplayGain okuyucu; Main tarafından etiket modülüne bağlanır. */
+    var replayGainProvider: ((File) -> Float?)? = null
+
+    /** Sıradaki parçayı hazırlar; crossfade/gapless için gereklidir. */
+    var onTrackChange: ((File, Double) -> Unit)? = null
+
+    @Volatile private var nextFile: File? = null
+    @Volatile private var nextDuration = 0.0
 
     /** Görselleştirici için 15 bantlık enerji (0..1). */
     @Volatile var bands: FloatArray = FloatArray(BAND_COUNT)
@@ -55,14 +73,31 @@ class AudioEngine {
         return if (rate <= 0f) 0.0 else framesPlayed.toDouble() / rate
     }
 
-    fun play(file: File, startSeconds: Double = 0.0) {
+    fun play(file: File, startSeconds: Double = 0.0, durationSeconds: Double = 0.0) {
         stop()
+        nextFile = null
+        trackDuration = durationSeconds
+        currentGain = if (replayGainEnabled) {
+            TagEditor.gainMultiplier(replayGainProvider?.invoke(file))
+        } else 1f
         val token = runToken
         paused = false
         worker = Thread({ run(file, startSeconds, token) }, "BeatBox-Audio").apply {
             isDaemon = true
             start()
         }
+    }
+
+    /**
+     * Sıradaki parçayı bildirir. Parça bitmeden önce açılıp crossfade/gapless
+     * geçişte kullanılır. [durationSeconds] yeni parçanın süresidir.
+     */
+    fun prepareNext(file: File?, durationSeconds: Double = 0.0) {
+        nextFile = file
+        nextDuration = durationSeconds
+        nextGain = if (file != null && replayGainEnabled) {
+            TagEditor.gainMultiplier(replayGainProvider?.invoke(file))
+        } else 1f
     }
 
     fun pause() {
@@ -136,73 +171,136 @@ class AudioEngine {
     private fun run(file: File, startSeconds: Double, token: Int) {
         var completed = false
         try {
-            AudioSystem.getAudioInputStream(file).use { raw ->
-                val base = raw.format
-                val pcm = AudioFormat(
-                    AudioFormat.Encoding.PCM_SIGNED,
-                    base.sampleRate,
-                    16,
-                    base.channels,
-                    base.channels * 2,
-                    base.sampleRate,
-                    false
-                )
-                AudioSystem.getAudioInputStream(pcm, raw).use { stream ->
-                    sampleRate = pcm.sampleRate
-                    val frameSize = pcm.frameSize
-                    framesPlayed = (startSeconds * pcm.sampleRate).toLong()
+            val base = AudioSystem.getAudioInputStream(file).use { it.format }
+            val pcm = AudioFormat(
+                AudioFormat.Encoding.PCM_SIGNED,
+                base.sampleRate,
+                16,
+                base.channels,
+                base.channels * 2,
+                base.sampleRate,
+                false,
+            )
+            var stream: javax.sound.sampled.AudioInputStream = openConverted(file, pcm)
+            stream.use { firstStream ->
+                sampleRate = pcm.sampleRate
+                val frameSize = pcm.frameSize
+                framesPlayed = (startSeconds * pcm.sampleRate).toLong()
 
-                    var remainingSkip = framesPlayed * frameSize
-                    while (remainingSkip > 0 && token == runToken) {
-                        val skipped = stream.skip(remainingSkip)
-                        if (skipped <= 0) break
-                        remainingSkip -= skipped
+                var remainingSkip = framesPlayed * frameSize
+                while (remainingSkip > 0 && token == runToken) {
+                    val skipped = firstStream.skip(remainingSkip)
+                    if (skipped <= 0L) break
+                    remainingSkip -= skipped
+                }
+
+                val audioLine = AudioSystem.getSourceDataLine(pcm)
+                audioLine.open(pcm, (pcm.sampleRate * frameSize * 0.35).toInt().coerceAtLeast(4096))
+                applyVolume(audioLine)
+                audioLine.start()
+                line = audioLine
+
+                val meter = BandMeter(pcm.sampleRate)
+                val buffer = ByteArray(8192)
+                val fadeBuffer = ByteArray(8192)
+                val fadeFrames = (crossfadeSeconds.coerceAtLeast(0f) * pcm.sampleRate).toLong()
+                var fadeDone = 0L
+                var nextStream: javax.sound.sampled.AudioInputStream? = null
+                var nextChain: EqChain? = null
+                var chain = currentChain ?: EqChain(pcm.sampleRate, pcm.channels, eqPreset)
+                    .also { currentChain = it }
+
+                /** Sıradaki parçayı ana akış yapar; UI'ya yeni parçayı bildirir. */
+                fun advance(): Boolean {
+                    val upcoming = nextStream ?: return false
+                    val upcomingFile = nextFile ?: return false
+                    runCatching { stream.close() }
+                    stream = upcoming
+                    chain = nextChain ?: EqChain(pcm.sampleRate, pcm.channels, eqPreset)
+                    currentChain = chain
+                    currentGain = nextGain
+                    trackDuration = nextDuration
+                    framesPlayed = if (fadeFrames > 0) fadeDone else 0L
+                    val startedAt = framesPlayed / pcm.sampleRate.toDouble()
+                    nextStream = null
+                    nextChain = null
+                    nextFile = null
+                    fadeDone = 0L
+                    onTrackChange?.invoke(upcomingFile, startedAt)
+                    return true
+                }
+
+                while (token == runToken) {
+                    if (paused) {
+                        Thread.sleep(30)
+                        continue
+                    }
+                    if (currentChain !== chain) {
+                        chain = EqChain(pcm.sampleRate, pcm.channels, eqPreset).also { currentChain = it }
                     }
 
-                    val audioLine = AudioSystem.getSourceDataLine(pcm)
-                    audioLine.open(pcm, (pcm.sampleRate * frameSize * 0.35).toInt().coerceAtLeast(4096))
-                    applyVolume(audioLine)
-                    audioLine.start()
-                    line = audioLine
+                    val remaining = trackDuration * pcm.sampleRate - framesPlayed
+                    if (nextStream == null && nextFile != null && trackDuration > 0 &&
+                        remaining <= fadeFrames + pcm.sampleRate * 0.1
+                    ) {
+                        val upcomingFile = nextFile!!
+                        val opened = runCatching { openConverted(upcomingFile, pcm) }.getOrNull()
+                        if (opened != null) {
+                            nextStream = opened
+                            nextChain = EqChain(pcm.sampleRate, pcm.channels, eqPreset)
+                        } else {
+                            nextFile = null
+                        }
+                    }
 
-                    val meter = BandMeter(pcm.sampleRate)
-                    val buffer = ByteArray(8192)
-                    var chain = currentChain ?: EqChain(pcm.sampleRate, pcm.channels, eqPreset)
-                        .also { currentChain = it }
+                    val read = stream.read(buffer)
+                    if (read <= 0) {
+                        if (nextStream == null && nextFile != null) {
+                            nextStream = runCatching { openConverted(nextFile!!, pcm) }.getOrNull()
+                            if (nextStream != null) nextChain = EqChain(pcm.sampleRate, pcm.channels, eqPreset)
+                        }
+                        if (advance()) continue
+                        completed = token == runToken
+                        break
+                    }
 
-                    while (token == runToken) {
+                    if (eqPreset != EQPreset.NONE) chain.process(buffer, read)
+                    applyGain(buffer, read, pcm.channels, currentGain)
+
+                    var writeLength = read
+                    if (nextStream != null && fadeFrames > 0) {
+                        val nextRead = nextStream!!.read(fadeBuffer)
+                        if (nextRead > 0) {
+                            if (eqPreset != EQPreset.NONE) nextChain?.process(fadeBuffer, nextRead)
+                            applyGain(fadeBuffer, nextRead, pcm.channels, nextGain)
+                            val progress = (fadeDone.toFloat() / fadeFrames).coerceIn(0f, 1f)
+                            mixFade(buffer, read, fadeBuffer, nextRead, progress)
+                        }
+                        fadeDone += read / frameSize
+                    }
+
+                    bands = meter.feed(buffer, writeLength, pcm.channels)
+                    level = meter.lastLevel
+                    var offset = 0
+                    while (offset < writeLength && token == runToken) {
                         if (paused) {
-                            Thread.sleep(30)
+                            Thread.sleep(20)
                             continue
                         }
-                        if (currentChain !== chain) {
-                            // Ön ayar değişti: süzgeçleri yeni ayarla yeniden kur.
-                            chain = EqChain(pcm.sampleRate, pcm.channels, eqPreset).also { currentChain = it }
-                        }
-                        val read = stream.read(buffer)
-                        if (read <= 0) {
-                            completed = token == runToken
-                            break
-                        }
-                        if (eqPreset != EQPreset.NONE) chain.process(buffer, read)
-                        bands = meter.feed(buffer, read, pcm.channels)
-                        level = meter.lastLevel
-                        var offset = 0
-                        while (offset < read && token == runToken) {
-                            if (paused) {
-                                Thread.sleep(20)
-                                continue
-                            }
-                            offset += audioLine.write(buffer, offset, read - offset)
-                        }
-                        framesPlayed += read / frameSize
+                        offset += audioLine.write(buffer, offset, writeLength - offset)
                     }
+                    framesPlayed += read / frameSize
 
-                    runCatching { audioLine.drain() }
-                    audioLine.stop()
-                    audioLine.close()
-                    if (line === audioLine) line = null
+                    if (nextStream != null && fadeFrames > 0 && fadeDone >= fadeFrames) {
+                        advance()
+                    }
                 }
+
+                runCatching { stream.close() }
+                runCatching { audioLine.drain() }
+                audioLine.stop()
+                audioLine.close()
+                if (line === audioLine) line = null
             }
         } catch (error: Exception) {
             if (token == runToken) {
@@ -215,8 +313,52 @@ class AudioEngine {
                 worker = null
                 bands = FloatArray(BAND_COUNT)
                 level = 0f
+                nextFile = null
             }
             if (completed) onCompleted?.invoke()
+        }
+    }
+
+    /** Dosyayı hedef 16 bit PCM biçimine çevirerek açar. */
+    private fun openConverted(file: File, target: AudioFormat): javax.sound.sampled.AudioInputStream =
+        AudioSystem.getAudioInputStream(target, AudioSystem.getAudioInputStream(file))
+
+    /** 16 bit PCM tamponuna sabit kazanç uygular. */
+    private fun applyGain(buffer: ByteArray, length: Int, channels: Int, gain: Float) {
+        if (gain in 0.999f..1.001f) return
+        var index = 0
+        while (index + 1 < length) {
+            val sample = ((buffer[index + 1].toInt() shl 8) or (buffer[index].toInt() and 0xFF)).toShort()
+            val value = (sample * gain).toInt().coerceIn(-32_768, 32_767)
+            buffer[index] = (value and 0xFF).toByte()
+            buffer[index + 1] = ((value shr 8) and 0xFF).toByte()
+            index += 2
+        }
+    }
+
+    /**
+     * Crossfade: eşit güç yasasıyla (cos/sin) iki PCM tamponunu karıştırır.
+     * [progress] 0 (yalnızca eski parça) → 1 (yalnızca yeni parça).
+     */
+    private fun mixFade(
+        destination: ByteArray,
+        destinationLength: Int,
+        incoming: ByteArray,
+        incomingLength: Int,
+        progress: Float,
+    ) {
+        val oldGain = kotlin.math.cos(progress * PI / 2f).toFloat()
+        val newGain = kotlin.math.sin(progress * PI / 2f).toFloat()
+        var index = 0
+        while (index + 1 < destinationLength) {
+            val old = ((destination[index + 1].toInt() shl 8) or (destination[index].toInt() and 0xFF)).toShort()
+            val new = if (index + 1 < incomingLength) {
+                ((incoming[index + 1].toInt() shl 8) or (incoming[index].toInt() and 0xFF)).toShort()
+            } else 0
+            val value = (old * oldGain + new * newGain).toInt().coerceIn(-32_768, 32_767)
+            destination[index] = (value and 0xFF).toByte()
+            destination[index + 1] = ((value shr 8) and 0xFF).toByte()
+            index += 2
         }
     }
 }
