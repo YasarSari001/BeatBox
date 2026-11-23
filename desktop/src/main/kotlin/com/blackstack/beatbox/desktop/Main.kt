@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,8 +38,12 @@ import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.QueueMusic
+import androidx.compose.material.icons.rounded.Repeat
+import androidx.compose.material.icons.rounded.RepeatOne
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.VolumeUp
@@ -67,6 +72,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -88,7 +98,42 @@ import java.util.Calendar
 import java.util.prefs.Preferences
 import javax.swing.JFileChooser
 
-private enum class Page { HOME, LIBRARY, LYRICS, SETTINGS }
+private enum class Page { HOME, LIBRARY, QUEUE, LYRICS, SETTINGS }
+
+/** Tekrar modu: kapalı, tüm listeyi döngüye al, şarkıyı tekrarla. */
+private enum class RepeatMode {
+    OFF, ALL, ONE;
+
+    fun next(): RepeatMode = entries[(ordinal + 1) % entries.size]
+}
+
+/** Shuffle/repeat kurallarına göre sıradaki (veya önceki) parçayı seçer. */
+private fun pickTrack(
+    current: Track?,
+    list: List<Track>,
+    shuffled: Boolean,
+    repeat: RepeatMode,
+    forward: Boolean,
+    automatic: Boolean,
+): Track? {
+    if (list.isEmpty()) return null
+    val index = list.indexOf(current)
+
+    if (shuffled && list.size > 1) {
+        return list.filter { it != current }.randomOrNull()
+    }
+    if (automatic && repeat == RepeatMode.ONE && current != null) return current
+
+    if (forward) {
+        if (index >= 0 && index < list.lastIndex) return list[index + 1]
+        if (repeat == RepeatMode.ALL || !automatic) return list.firstOrNull()
+        return null
+    }
+
+    if (index > 0) return list[index - 1]
+    if (repeat == RepeatMode.ALL || !automatic) return list.lastOrNull()
+    return list.firstOrNull()
+}
 
 fun main() = application {
     val prefs = remember { Preferences.userRoot().node("com/blackstack/beatbox/desktop") }
@@ -100,7 +145,19 @@ fun main() = application {
     var windowVisible by remember { mutableStateOf(true) }
     val trayController = remember { TrayController() }
 
+    val savedWidth = prefs.getInt("window_width", 1320)
+    val savedHeight = prefs.getInt("window_height", 840)
+    val windowState = rememberWindowState(width = savedWidth.dp, height = savedHeight.dp)
+
+    fun saveWindowSize() {
+        runCatching {
+            prefs.putInt("window_width", windowState.size.width.value.toInt())
+            prefs.putInt("window_height", windowState.size.height.value.toInt())
+        }
+    }
+
     fun quit() {
+        saveWindowSize()
         prefs.putBoolean("now_playing_visible", nowPlayingVisible)
         prefs.putBoolean("close_to_tray", closeToTray)
         engine.stop()
@@ -113,12 +170,31 @@ fun main() = application {
         onExit = { quit() },
     )
 
-    val savedWidth = prefs.getInt("window_width", 1320)
-    val savedHeight = prefs.getInt("window_height", 840)
-    val windowState = rememberWindowState(width = savedWidth.dp, height = savedHeight.dp)
-
     Window(
+        onPreviewKeyEvent = { event ->
+            if (event.type != KeyEventType.KeyDown) {
+                false
+            } else when (event.key) {
+                Key.MediaPlayPause -> { trayController.onTogglePlay(); true }
+                Key.MediaNext, Key.MediaSkipForward -> { trayController.onNext(); true }
+                Key.MediaPrevious, Key.MediaSkipBackward -> { trayController.onPrevious(); true }
+                Key.Spacebar, Key.DirectionRight, Key.DirectionLeft -> {
+                    if (trayController.shortcutsBlocked || event.isCtrlPressed) {
+                        false
+                    } else {
+                        when (event.key) {
+                            Key.Spacebar -> trayController.onTogglePlay()
+                            Key.DirectionRight -> trayController.onNext()
+                            else -> trayController.onPrevious()
+                        }
+                        true
+                    }
+                }
+                else -> false
+            }
+        },
         onCloseRequest = {
+            saveWindowSize()
             if (closeToTray) {
                 prefs.putBoolean("close_to_tray", true)
                 windowVisible = false
@@ -173,6 +249,15 @@ private fun BeatBoxDesktop(
 
     var page by remember { mutableStateOf(Page.HOME) }
     var nowPlayingVisible by remember { mutableStateOf(true) }
+    var shuffle by remember { mutableStateOf(prefs.getBoolean("shuffle", false)) }
+    var repeatMode by remember {
+        mutableStateOf(
+            runCatching { RepeatMode.valueOf(prefs.get("repeat_mode", RepeatMode.OFF.name)) }
+                .getOrDefault(RepeatMode.OFF)
+        )
+    }
+    var searchFocused by remember { mutableStateOf(false) }
+    var queue by remember { mutableStateOf<List<Track>>(emptyList()) }
     var tracks by remember { mutableStateOf<List<Track>>(emptyList()) }
     var scanning by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
@@ -240,11 +325,16 @@ private fun BeatBoxDesktop(
     }
 
     fun step(delta: Int) {
-        val list = visible.filter { it.kind == MediaKind.AUDIO }
-        if (list.isEmpty()) return
-        val index = list.indexOf(current)
-        val nextIndex = (index + delta).coerceIn(0, list.lastIndex)
-        if (nextIndex != index || index == -1) playTrack(list[nextIndex])
+        val list = queue.ifEmpty { visible.filter { it.kind == MediaKind.AUDIO } }
+        val target = pickTrack(
+            current = current,
+            list = list,
+            shuffled = shuffle,
+            repeat = repeatMode,
+            forward = delta > 0,
+            automatic = false,
+        )
+        if (target != null) playTrack(target)
     }
 
     fun loadFolder(target: File) {
@@ -280,6 +370,7 @@ private fun BeatBoxDesktop(
     SideEffect {
         trayController.strings = strings
         trayController.isPlaying = isPlaying
+        trayController.shortcutsBlocked = editingTrack != null || searchFocused
         trayController.title = current?.let { track ->
             listOf(track.title, track.artist)
                 .filter { it.isNotBlank() }
@@ -303,18 +394,30 @@ private fun BeatBoxDesktop(
 
     val visibleNow by rememberUpdatedState(visible)
     val currentNow by rememberUpdatedState(current)
+    val queueNow by rememberUpdatedState(queue)
+    val shuffleNow by rememberUpdatedState(shuffle)
+    val repeatNow by rememberUpdatedState(repeatMode)
+    val volumeNow by rememberUpdatedState(volume)
+    val eqNow by rememberUpdatedState(eqPreset)
 
     DisposableEffect(engine) {
         engine.onCompleted = {
-            val list = visibleNow.filter { it.kind == MediaKind.AUDIO }
-            val index = list.indexOf(currentNow)
-            if (index >= 0 && index < list.lastIndex) {
-                val nextTrack = list[index + 1]
+            val list = queueNow.ifEmpty { visibleNow.filter { it.kind == MediaKind.AUDIO } }
+            val nextTrack = pickTrack(
+                current = currentNow,
+                list = list,
+                shuffled = shuffleNow,
+                repeat = repeatNow,
+                forward = true,
+                automatic = true,
+            )
+            if (nextTrack != null) {
                 error = null
                 current = nextTrack
                 position = 0.0
                 duration = nextTrack.durationSeconds
-                engine.setEqPreset(eqPreset)
+                engine.setVolume(volumeNow)
+                engine.setEqPreset(eqNow)
                 engine.play(nextTrack.file)
             } else {
                 isPlaying = false
@@ -463,7 +566,21 @@ private fun BeatBoxDesktop(
                             },
                             onOpen = { openMedia(it) },
                             onEdit = { editingTrack = it },
+                            onQueue = { track ->
+                                if (track.kind == MediaKind.AUDIO && track !in queue) queue = queue + track
+                            },
+                            onSearchFocusChange = { searchFocused = it },
                             onChooseFolder = { chooseFolder() },
+                        )
+
+                        Page.QUEUE -> QueuePage(
+                            strings = strings,
+                            queue = queue,
+                            current = current,
+                            isPlaying = isPlaying,
+                            onPlay = { playTrack(it) },
+                            onRemove = { track -> queue = queue.filter { it != track } },
+                            onClear = { queue = emptyList() },
                         )
 
                         Page.LYRICS -> LyricsPage(
@@ -531,6 +648,16 @@ private fun BeatBoxDesktop(
                 eqPreset = eqPreset,
                 sleepRemaining = sleepUntil?.let { sleepRemaining },
                 folder = folder,
+                shuffle = shuffle,
+                repeatMode = repeatMode,
+                onShuffleChange = {
+                    shuffle = it
+                    prefs.putBoolean("shuffle", it)
+                },
+                onRepeatChange = {
+                    repeatMode = it
+                    prefs.put("repeat_mode", it.name)
+                },
                 onSeek = { target -> current?.let { playTrack(it, target) } },
                 onTogglePlay = {
                     val track = current ?: audioTracks.firstOrNull()
@@ -623,6 +750,7 @@ private fun NavRail(
 
         NavItem(strings.get("home"), Icons.Rounded.Home, page == Page.HOME) { onPageChange(Page.HOME) }
         NavItem(strings.get("library"), Icons.Rounded.LibraryMusic, page == Page.LIBRARY) { onPageChange(Page.LIBRARY) }
+        NavItem(strings.dt("queue"), Icons.Rounded.QueueMusic, page == Page.QUEUE) { onPageChange(Page.QUEUE) }
         NavItem(strings.dt("lyrics"), Icons.Rounded.Lyrics, page == Page.LYRICS) { onPageChange(Page.LYRICS) }
         Spacer(Modifier.weight(1f))
         NavItem(strings.get("settings"), Icons.Rounded.Settings, page == Page.SETTINGS) { onPageChange(Page.SETTINGS) }
@@ -679,6 +807,7 @@ private fun HeaderBar(
                 text = when (page) {
                     Page.HOME -> strings.get("app_name")
                     Page.LIBRARY -> strings.get("library")
+                    Page.QUEUE -> strings.dt("queue")
                     Page.LYRICS -> strings.dt("lyrics")
                     Page.SETTINGS -> strings.get("settings")
                 },
@@ -880,6 +1009,8 @@ private fun LibraryPage(
     onSortChange: (Boolean) -> Unit,
     onOpen: (Track) -> Unit,
     onEdit: (Track) -> Unit,
+    onQueue: (Track) -> Unit,
+    onSearchFocusChange: (Boolean) -> Unit,
     onChooseFolder: () -> Unit,
 ) {
     if (tracks.isEmpty()) {
@@ -895,7 +1026,7 @@ private fun LibraryPage(
                 singleLine = true,
                 placeholder = { Text(strings.get("search"), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp) },
                 leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).onFocusChanged { onSearchFocusChange(it.isFocused) },
                 shape = RoundedCornerShape(16.dp),
             )
             Spacer(Modifier.width(8.dp))
@@ -960,6 +1091,7 @@ private fun LibraryPage(
                         isPlaying = isPlaying && track == current,
                         onClick = { onOpen(track) },
                         onEdit = if (track.kind == MediaKind.AUDIO) { { onEdit(track) } } else null,
+                        onQueue = if (track.kind == MediaKind.AUDIO) { { onQueue(track) } } else null,
                     )
                 }
             }
@@ -1045,6 +1177,7 @@ private fun TrackRow(
     isPlaying: Boolean,
     onClick: () -> Unit,
     onEdit: (() -> Unit)? = null,
+    onQueue: (() -> Unit)? = null,
 ) {
     val icon: ImageVector = when (track.kind) {
         MediaKind.AUDIO -> if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow
@@ -1101,6 +1234,17 @@ private fun TrackRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+        }
+        if (onQueue != null && track.kind == MediaKind.AUDIO) {
+            IconButton(onClick = onQueue, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    Icons.Rounded.QueueMusic,
+                    contentDescription = strings.dt("queue_add"),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+            Spacer(Modifier.width(4.dp))
         }
         if (onEdit != null && track.kind == MediaKind.AUDIO) {
             IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
@@ -1187,6 +1331,10 @@ private fun NowPlayingPanel(
     eqPreset: EQPreset,
     sleepRemaining: Long?,
     folder: File?,
+    shuffle: Boolean,
+    repeatMode: RepeatMode,
+    onShuffleChange: (Boolean) -> Unit,
+    onRepeatChange: (RepeatMode) -> Unit,
     onSeek: (Double) -> Unit,
     onTogglePlay: () -> Unit,
     onVolume: (Float) -> Unit,
@@ -1278,6 +1426,14 @@ private fun NowPlayingPanel(
         }
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            IconButton(onClick = { onShuffleChange(!shuffle) }) {
+                Icon(
+                    Icons.Rounded.Shuffle,
+                    contentDescription = strings.get("shuffle"),
+                    tint = if (shuffle) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
             IconButton(onClick = onPrev) {
                 Icon(Icons.Rounded.SkipPrevious, contentDescription = strings.get("previous"), tint = MaterialTheme.colorScheme.onSurface)
             }
@@ -1298,6 +1454,21 @@ private fun NowPlayingPanel(
             }
             IconButton(onClick = onNext) {
                 Icon(Icons.Rounded.SkipNext, contentDescription = strings.get("next"), tint = MaterialTheme.colorScheme.onSurface)
+            }
+            IconButton(onClick = { onRepeatChange(repeatMode.next()) }) {
+                Icon(
+                    imageVector = when (repeatMode) {
+                        RepeatMode.ONE -> Icons.Rounded.RepeatOne
+                        else -> Icons.Rounded.Repeat
+                    },
+                    contentDescription = when (repeatMode) {
+                        RepeatMode.OFF -> strings.dt("repeat_off")
+                        RepeatMode.ALL -> strings.dt("repeat_all")
+                        RepeatMode.ONE -> strings.dt("repeat_one")
+                    },
+                    tint = if (repeatMode == RepeatMode.OFF) MaterialTheme.colorScheme.onSurfaceVariant else accent,
+                    modifier = Modifier.size(20.dp),
+                )
             }
         }
 

@@ -28,6 +28,8 @@ class TrayController {
     var strings by mutableStateOf(Strings(AppLanguage.TR))
     var isPlaying by mutableStateOf(false)
     var title by mutableStateOf<String?>(null)
+    /** Metin alanı veya pencere açıkken düz klavye kısayollarını engeller. */
+    var shortcutsBlocked by mutableStateOf(false)
     var onTogglePlay: () -> Unit = {}
     var onNext: () -> Unit = {}
     var onPrevious: () -> Unit = {}

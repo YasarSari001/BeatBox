@@ -435,6 +435,78 @@ private val desktopStrings: Map<String, Map<String, String>> = mapOf(
         "ja" to "トラック番号", "zh" to "音轨号",
         "ar" to "رقم المقطع", "ko" to "트랙 번호"
     ),
+    "repeat_off" to mapOf(
+        "tr" to "Tekrar kapalı", "en" to "Repeat off",
+        "es" to "Repetición desactivada", "fr" to "Répétition désactivée",
+        "de" to "Wiederholung aus", "it" to "Ripetizione disattivata",
+        "pt" to "Repetição desativada", "ru" to "Повтор выключен",
+        "ja" to "リピートオフ", "zh" to "关闭循环",
+        "ar" to "التكرار متوقف", "ko" to "반복 끄기"
+    ),
+    "repeat_all" to mapOf(
+        "tr" to "Tümünü tekrarla", "en" to "Repeat all",
+        "es" to "Repetir todo", "fr" to "Répéter tout",
+        "de" to "Alle wiederholen", "it" to "Ripeti tutto",
+        "pt" to "Repetir tudo", "ru" to "Повторять все",
+        "ja" to "すべてリピート", "zh" to "循环播放全部",
+        "ar" to "تكرار الكل", "ko" to "전체 반복"
+    ),
+    "repeat_one" to mapOf(
+        "tr" to "Şarkıyı tekrarla", "en" to "Repeat one",
+        "es" to "Repetir una canción", "fr" to "Répéter le titre",
+        "de" to "Titel wiederholen", "it" to "Ripeti il brano",
+        "pt" to "Repetir uma faixa", "ru" to "Повторять трек",
+        "ja" to "1曲リピート", "zh" to "单曲循环",
+        "ar" to "تكرار أغنية واحدة", "ko" to "한 곡 반복"
+    ),
+    "queue" to mapOf(
+        "tr" to "Kuyruk", "en" to "Queue",
+        "es" to "Cola", "fr" to "File d'attente",
+        "de" to "Warteschlange", "it" to "Coda",
+        "pt" to "Fila", "ru" to "Очередь",
+        "ja" to "キュー", "zh" to "播放队列",
+        "ar" to "قائمة التشغيل", "ko" to "재생 목록"
+    ),
+    "queue_count" to mapOf(
+        "tr" to "%d parça", "en" to "%d tracks",
+        "es" to "%d pistas", "fr" to "%d titres",
+        "de" to "%d Titel", "it" to "%d brani",
+        "pt" to "%d faixas", "ru" to "%d треков",
+        "ja" to "%d 曲", "zh" to "%d 首",
+        "ar" to "%d مقطع", "ko" to "%d곡"
+    ),
+    "queue_clear" to mapOf(
+        "tr" to "Kuyruğu temizle", "en" to "Clear queue",
+        "es" to "Vaciar la cola", "fr" to "Vider la file",
+        "de" to "Warteschlange leeren", "it" to "Svuota la coda",
+        "pt" to "Limpar a fila", "ru" to "Очистить очередь",
+        "ja" to "キューをクリア", "zh" to "清空队列",
+        "ar" to "مسح قائمة التشغيل", "ko" to "재생 목록 비우기"
+    ),
+    "queue_empty" to mapOf(
+        "tr" to "Kuyruk boş. Kütüphaneden parça ekleyin.", "en" to "The queue is empty. Add tracks from your library.",
+        "es" to "La cola está vacía. Añade pistas desde la biblioteca.", "fr" to "La file est vide. Ajoutez des titres depuis la bibliothèque.",
+        "de" to "Die Warteschlange ist leer. Füge Titel aus der Bibliothek hinzu.", "it" to "La coda è vuota. Aggiungi brani dalla libreria.",
+        "pt" to "A fila está vazia. Adicione faixas da biblioteca.", "ru" to "Очередь пуста. Добавьте треки из библиотеки.",
+        "ja" to "キューは空です。ライブラリから曲を追加してください。", "zh" to "队列为空。请从音乐库添加歌曲。",
+        "ar" to "قائمة التشغيل فارغة. أضف مقاطع من المكتبة.", "ko" to "재생 목록이 비어 있습니다. 보관함에서 곡을 추가하세요."
+    ),
+    "queue_remove" to mapOf(
+        "tr" to "Kuyruktan çıkar", "en" to "Remove from queue",
+        "es" to "Quitar de la cola", "fr" to "Retirer de la file",
+        "de" to "Aus Warteschlange entfernen", "it" to "Rimuovi dalla coda",
+        "pt" to "Remover da fila", "ru" to "Убрать из очереди",
+        "ja" to "キューから削除", "zh" to "从队列移除",
+        "ar" to "إزالة من قائمة التشغيل", "ko" to "재생 목록에서 제거"
+    ),
+    "queue_add" to mapOf(
+        "tr" to "Kuyruğa ekle", "en" to "Add to queue",
+        "es" to "Añadir a la cola", "fr" to "Ajouter à la file",
+        "de" to "Zur Warteschlange hinzufügen", "it" to "Aggiungi alla coda",
+        "pt" to "Adicionar à fila", "ru" to "Добавить в очередь",
+        "ja" to "キューに追加", "zh" to "加入队列",
+        "ar" to "إضافة إلى قائمة التشغيل", "ko" to "재생 목록에 추가"
+    ),
 )
 
 fun Strings.dt(key: String): String {

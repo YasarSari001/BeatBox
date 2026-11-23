@@ -18,10 +18,10 @@
 ## 3. Feature Roadmap (3 Aşama)
 
 ### Aşama 1 — Temel Eksikler (bu ay)
-- [ ] Klavye kısayolları: Space, Medya Oynat/Duraklat, İleri (→), Geri (←)
-- [ ] Karıştır (shuffle) / Tekrar (repeat) modları
-- [ ] Oynatma kuyruğu (queue) görünümü
-- [ ] Pencere boyutu hatırlama (son boyutu kaydet, açışta uygula)
+- [x] Klavye kısayolları: Space, Medya Oynat/Duraklat, İleri (→), Geri (←) — 2026-11-23
+- [x] Karıştır (shuffle) / Tekrar (repeat) modları — 2026-11-23
+- [x] Oynatma kuyruğu (queue) görünümü — 2026-11-23
+- [x] Pencere boyutu hatırlama (son boyutu kaydet, açışta uygula) — 2026-11-23
 - [x] Sistem tepsi (tray): kapatınca arka plana indirme — 2026-11-23
 
 ### Aşama 2 — Ses Kalitesi ve Kütüphane (1-2 ay)
@@ -98,3 +98,18 @@
   oynatılan parça anında güncellenir.
 - `TagEditorTest.kt`: üretilen sessiz WAV üzerinde yaz/oku ve alan silme
   testleri yeşil (Türkçe karakterler dahil).
+
+### 2026-11-23 — Aşama 1 tamamlandı: kuyruk, karıştırma, kısayollar ✅
+- `QueuePage.kt`: kuyruk sayfası; sıralı liste, çal/kaldır/temizle, boş durum.
+  Kütüphane satırındaki kuyruk düğmesiyle parça eklenir; kuyruk boşken normal
+  kitaplık sırası kullanılır.
+- Shuffle ve tekrar (kapalı/tümü/tek) oynatıcı panelinde düğmelerle
+  yönetilir, `shuffle` / `repeat_mode` tercihlerinde saklanır.
+- `pickTrack()` saf yardımcı fonksiyonu otomatik geçişte ve kullanıcı
+  komutlarında aynı kuralları uygular (repeat-one, shuffle, sona gelince dönme).
+- Klavye: Space (çal/duraklat), ←/→ (önceki/sonraki), medya tuşları
+  (Play/Pause, Media Next/Previous). Metin alanı odaktayken düz tuşlar
+  devre dışı; Ctrl ile birleşimler asla engellenmez.
+- Pencere boyutu kapatma/çıkışta kaydedilir (`window_width`/`window_height`).
+- 12 yeni metin anahtarı × 12 dil. `:desktop:test` yeşil; uygulama 25 sn
+  çalıştırılıp çalışır durumda kaldı (çökme/istisna yok).
