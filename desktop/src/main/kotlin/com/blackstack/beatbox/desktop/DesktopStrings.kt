@@ -507,6 +507,14 @@ private val desktopStrings: Map<String, Map<String, String>> = mapOf(
         "ja" to "キューに追加", "zh" to "加入队列",
         "ar" to "إضافة إلى قائمة التشغيل", "ko" to "재생 목록에 추가"
     ),
+    "show_player" to mapOf(
+        "tr" to "Tam oynatıcıyı göster", "en" to "Show full player",
+        "es" to "Mostrar reproductor completo", "fr" to "Afficher le lecteur complet",
+        "de" to "Vollständigen Player anzeigen", "it" to "Mostra il player completo",
+        "pt" to "Mostrar player completo", "ru" to "Показать полный плеер",
+        "ja" to "フルプレーヤーを表示", "zh" to "显示完整播放器",
+        "ar" to "إظهار المشغّل الكامل", "ko" to "전체 플레이어 표시"
+    ),
 )
 
 fun Strings.dt(key: String): String {

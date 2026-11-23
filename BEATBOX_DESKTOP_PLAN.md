@@ -32,7 +32,7 @@
 - [ ] Albüm sanatı görünümü (kütüphede kare izgara)
 
 ### Aşama 3 — Telefon (APK) ile Tam Uyum (2-3 ay)
-- [ ] Mini player (çalma sırasında küçük çubuk)
+- [x] Mini player (çalma sırasında küçük çubuk) — 2026-11-23
 - [ ] Sistem bildirimi / kilit ekranı kontrolü
 - [x] Şarkı sözleri (lyrics) paneli — 2026-11-23
 - [ ] Bluetooth kulaklık / çıkış cihazı seçimi
@@ -113,3 +113,10 @@
 - Pencere boyutu kapatma/çıkışta kaydedilir (`window_width`/`window_height`).
 - 12 yeni metin anahtarı × 12 dil. `:desktop:test` yeşil; uygulama 25 sn
   çalıştırılıp çalışır durumda kaldı (çökme/istisna yok).
+
+### 2026-11-23 — Mini player ✅
+- `MiniPlayer.kt`: tam panel gizlendiğinde çıkan 68 dp'lik çubuk; parça
+  bilgisi, çal/duraklat, sonraki, ilerleme çizgisi ve tam paneli açma düğmesi.
+- `now_playing_visible` tercihi artık açılışta okunuyor ve her değişimde
+  yazılıyor (önce içeride her zaman `true` ile başlıyordu).
+- 1 metin anahtarı × 12 dil; `:desktop:compileKotlin` ve `:desktop:test` yeşil.

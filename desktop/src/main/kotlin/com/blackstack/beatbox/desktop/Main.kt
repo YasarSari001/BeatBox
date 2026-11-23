@@ -248,7 +248,9 @@ private fun BeatBoxDesktop(
     val strings = remember(language) { Strings(language) }
 
     var page by remember { mutableStateOf(Page.HOME) }
-    var nowPlayingVisible by remember { mutableStateOf(true) }
+    var nowPlayingVisible by remember {
+        mutableStateOf(prefs.getBoolean("now_playing_visible", true))
+    }
     var shuffle by remember { mutableStateOf(prefs.getBoolean("shuffle", false)) }
     var repeatMode by remember {
         mutableStateOf(
@@ -497,7 +499,10 @@ private fun BeatBoxDesktop(
                         prefs.put("language", it.name)
                     },
                     onChooseFolder = { chooseFolder() },
-                    onNowPlayingToggle = { nowPlayingVisible = !nowPlayingVisible }
+                    onNowPlayingToggle = {
+                        nowPlayingVisible = !nowPlayingVisible
+                        prefs.putBoolean("now_playing_visible", nowPlayingVisible)
+                    }
                 )
 
                 if (scanning) {
@@ -632,6 +637,33 @@ private fun BeatBoxDesktop(
                             },
                             sleepRemaining = sleepUntil?.let { sleepRemaining },
                         )
+                    }
+
+                    if (!nowPlayingVisible) {
+                        current?.takeIf { it.kind == MediaKind.AUDIO }?.let { active ->
+                            Spacer(Modifier.height(10.dp))
+                            MiniPlayer(
+                                strings = strings,
+                                track = active,
+                                isPlaying = isPlaying,
+                                position = position,
+                                duration = duration,
+                                onTogglePlay = {
+                                    if (isPlaying) {
+                                        engine.pause()
+                                        isPlaying = false
+                                    } else {
+                                        engine.resume()
+                                        isPlaying = true
+                                    }
+                                },
+                                onNext = { step(1) },
+                                onShowPanel = {
+                                    nowPlayingVisible = true
+                                    prefs.putBoolean("now_playing_visible", true)
+                                },
+                            )
+                        }
                     }
                 }
             }
