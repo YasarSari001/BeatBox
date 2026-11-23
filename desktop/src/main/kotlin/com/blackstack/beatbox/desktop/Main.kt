@@ -92,13 +92,20 @@ fun main() = application {
     val engine = remember { AudioEngine() }
     var theme by remember { mutableStateOf(loadTheme(prefs)) }
 
+    var nowPlayingVisible by remember { mutableStateOf(prefs.getBoolean("now_playing_visible", true)) }
+
+    val savedWidth = prefs.getInt("window_width", 1320)
+    val savedHeight = prefs.getInt("window_height", 840)
+    val windowState = rememberWindowState(width = savedWidth.dp, height = savedHeight.dp)
+
     Window(
         onCloseRequest = {
+            prefs.putBoolean("now_playing_visible", nowPlayingVisible)
             engine.stop()
             exitApplication()
         },
         title = "BeatBox",
-        state = rememberWindowState(width = 1320.dp, height = 840.dp)
+        state = windowState
     ) {
         MaterialTheme(colorScheme = DesktopColorScheme(theme)) {
             BeatBoxDesktop(engine, prefs, theme) { updated ->
