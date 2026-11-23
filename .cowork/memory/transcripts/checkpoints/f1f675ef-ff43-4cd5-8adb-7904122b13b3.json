@@ -1,0 +1,44 @@
+{
+  "checkpointKind": "completion",
+  "sourceEventId": "4a3e6720-4d66-4de2-9cea-34c40ed10464",
+  "sourceTimestamp": 1795278577255,
+  "resumeStrategy": "checkpoint",
+  "structuredSummary": {
+    "source": "completion",
+    "rawText": "I ran into a timeout before I could finish. Reason: Plan creation timed out after 120s. The remaining work was not completed before the time limit.\n\nCompletion notes:\n- Timeout recovery finalized with best-effort answer.",
+    "decisions": [],
+    "openLoops": [],
+    "nextActions": [],
+    "keyFindings": [
+      "I ran into a timeout before I could finish. Reason: Plan creation timed out after 120s. The remaining work was not completed before the time limit.\n\nCompletion notes:\n- Timeout recovery finalized with best-effort answer."
+    ]
+  },
+  "evidencePacket": {
+    "generatedAt": 1795278577366,
+    "spanHash": "517f4766332330f69b4467d484b7ea5f24736cbd15727619d34d1f4fe5ac595b",
+    "spanCount": 1,
+    "spans": [
+      {
+        "sourceType": "task_message",
+        "objectId": "d5b46279-97ba-46f6-b74a-0658ffd00392",
+        "taskId": "f1f675ef-ff43-4cd5-8adb-7904122b13b3",
+        "timestamp": 1795278015705,
+        "type": "user_message",
+        "excerpt": "dosyaları analiz et",
+        "eventId": "d5b46279-97ba-46f6-b74a-0658ffd00392",
+        "seq": 7
+      }
+    ]
+  },
+  "dedupeHash": "517f4766332330f69b4467d484b7ea5f24736cbd15727619d34d1f4fe5ac595b",
+  "sourceMetadata": {
+    "triggerEventType": "task_completed",
+    "meaningfulExchangeCount": 1
+  },
+  "timestamp": 1795278577367,
+  "checkpointIntegrity": {
+    "algorithm": "hmac-sha256",
+    "generation": 1,
+    "checksum": "c6bd2e4e01f45714c733e730605a633907d79270a5063767396f9a94ce170e82"
+  }
+}

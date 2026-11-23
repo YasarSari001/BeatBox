@@ -26,4 +26,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "BeatBox"
-include(":app")
+include(":app", ":core", ":desktop")

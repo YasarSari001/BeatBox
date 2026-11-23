@@ -57,3 +57,10 @@ Thumbs.db
 
 # --- Accidental / stray paths ---
 /app/Erten/
+
+# --- Windows dağıtım paketi ---
+/BeatBox-*-windows.zip
+
+# --- Desktop (Compose Multiplatform) outputs ---
+/desktop/build/
+/desktop/.gradle/

@@ -97,6 +97,9 @@ kotlin {
 }
 
 dependencies {
+    // Ortak (Android'siz) metin ve dosya adı mantığı
+    implementation(project(":core"))
+
     // Core Library Desugaring (required when isCoreLibraryDesugaringEnabled = true)
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 
