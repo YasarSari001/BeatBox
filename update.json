@@ -1,6 +1,6 @@
 {
-  "versionCode": 16,
-  "versionName": "3.9.4",
+  "versionCode": 17,
+  "versionName": "3.9.5",
   "apkUrl": "https://github.com/YasarSari001/BeatBox/releases/latest/download/BeatBox.apk",
-  "changelog": "BeatBox 3.9.4\n• Windows'ta kurulum artık sabit bir bekleme yerine uygulamanın gerçekten kapanmasını bekliyor\n• Önceki oturumlardan kalan geçici kurulum dosyaları açılışta temizleniyor\n• Sessiz güncelleme denetiminin zaman damgası yalnızca başarılı denetimden sonra yazılıyor; ağ hatası sonraki açılışta yeniden deneniyor\n• Sürüm numarası tek kaynaktan (version.properties) geliyor ve yayınlar etiketle otomatik üretiliyor"
+  "changelog": "BeatBox 3.9.5\n• Windows kurulumuna uygulama simgesi eklendi; kısayol, görev çubuğu ve \"Uygulamalar\" listesi artık BeatBox simgesini gösteriyor\n• Kurulum kaydı sabit bir kimlik kullanıyor: yeni sürümler \"Uygulamalar\" listesindeki aynı kaydı güncelliyor\n• Kurulum kullanıcı bazına alındı; uygulama içi güncelleme yönetici izni istemiyor\n• Pencere boyutu ekrana sığacak şekilde sınırlandı; Ayarlar'ın alt satırları artık erişilebilir\n• Uygulama içi güncelleme indirmesi düzeltildi: ilerleme güncellemesi indirmeyi durduruyordu\n• İndirme başarısız olursa yarım kalan dosya siliniyor, hata nedeni tanılama dosyasına yazılıyor\n• Önceki oturumlardan kalan geçici kurulum dosyaları her açılışta temizleniyor"
 }

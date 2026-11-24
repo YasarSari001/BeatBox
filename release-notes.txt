@@ -1,5 +1,8 @@
-BeatBox 3.9.4
-• Windows'ta kurulum artık sabit bir bekleme yerine uygulamanın gerçekten kapanmasını bekliyor
-• Önceki oturumlardan kalan geçici kurulum dosyaları açılışta temizleniyor
-• Sessiz güncelleme denetiminin zaman damgası yalnızca başarılı denetimden sonra yazılıyor; ağ hatası sonraki açılışta yeniden deneniyor
-• Sürüm numarası tek kaynaktan (version.properties) geliyor ve yayınlar etiketle otomatik üretiliyor
+BeatBox 3.9.5
+• Windows kurulumuna uygulama simgesi eklendi; kısayol, görev çubuğu ve "Uygulamalar" listesi artık BeatBox simgesini gösteriyor
+• Kurulum kaydı sabit bir kimlik kullanıyor: yeni sürümler "Uygulamalar" listesindeki aynı kaydı güncelliyor
+• Kurulum kullanıcı bazına alındı; uygulama içi güncelleme yönetici izni istemiyor
+• Pencere boyutu ekrana sığacak şekilde sınırlandı; Ayarlar'ın alt satırları artık erişilebilir
+• Uygulama içi güncelleme indirmesi düzeltildi: ilerleme güncellemesi indirmeyi durduruyordu
+• İndirme başarısız olursa yarım kalan dosya siliniyor, hata nedeni tanılama dosyasına yazılıyor
+• Önceki oturumlardan kalan geçici kurulum dosyaları her açılışta temizleniyor

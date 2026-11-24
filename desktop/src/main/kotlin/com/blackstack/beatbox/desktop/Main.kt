@@ -96,6 +96,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.Desktop
+import java.awt.GraphicsEnvironment
 import java.io.File
 import java.net.URI
 import java.util.Calendar
@@ -158,6 +159,26 @@ private fun pickTrack(
 /** Açılışta sessiz güncelleme denetiminin aralığı: günde bir kez. */
 private const val UPDATE_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000L
 
+/**
+ * Pencere boyutunu ekrana sığdırır.
+ *
+ * Kaydedilen boyut dp cinsinden tutulduğu için %125 ölçekli bir ekranda
+ * 840 dp fiziksel olarak ekran yüksekliğini aşabiliyor; pencere ekranın
+ * altına taşınca Ayarlar'ın alt satırları (güncelleme düğmesi dahil)
+ * tıklanamıyordu. Kenarlarda biraz boşluk bırakılır.
+ */
+private fun fitWindowToScreen(width: Int, height: Int): Pair<Int, Int> {
+    val env = GraphicsEnvironment.getLocalGraphicsEnvironment()
+    val bounds = env.maximumWindowBounds
+    val scale = runCatching {
+        env.defaultScreenDevice.defaultConfiguration.defaultTransform.scaleX.toFloat()
+    }.getOrDefault(1f).takeIf { it > 0f } ?: 1f
+    val maxWidth = (bounds.width / scale).toInt() - 24
+    val maxHeight = (bounds.height / scale).toInt() - 24
+    return width.coerceAtMost(maxWidth).coerceAtLeast(960) to
+        height.coerceAtMost(maxHeight).coerceAtLeast(600)
+}
+
 fun main() = application {
     val prefs = remember { Preferences.userRoot().node("com/blackstack/beatbox/desktop") }
     val engine = remember { AudioEngine() }
@@ -168,8 +189,10 @@ fun main() = application {
     var windowVisible by remember { mutableStateOf(true) }
     val trayController = remember { TrayController() }
 
-    val savedWidth = prefs.getInt("window_width", 1320)
-    val savedHeight = prefs.getInt("window_height", 840)
+    val (savedWidth, savedHeight) = fitWindowToScreen(
+        width = prefs.getInt("window_width", 1320),
+        height = prefs.getInt("window_height", 840),
+    )
     val windowState = rememberWindowState(width = savedWidth.dp, height = savedHeight.dp)
 
     fun saveWindowSize() {
@@ -452,11 +475,11 @@ private fun BeatBoxDesktop(
      * yutulur (elle denetimde hata mesajı gösterilmeye devam eder).
      */
     LaunchedEffect(Unit) {
+        // Önceki oturumlardan kalan yarım indirmeler her açılışta silinir.
+        withContext(Dispatchers.IO) { DesktopUpdateChecker.cleanupTempInstallers() }
         val now = System.currentTimeMillis()
         val last = prefs.getLong("update_last_check", 0L)
         if (now - last < UPDATE_CHECK_INTERVAL_MS) return@LaunchedEffect
-        // Önceki oturumlardan kalan yarım indirmeler açılışta silinir.
-        withContext(Dispatchers.IO) { DesktopUpdateChecker.cleanupTempInstallers() }
         updateState = UpdateUiState.Checking
         val result = DesktopUpdateChecker.check()
         updateState = when (result) {
@@ -779,9 +802,18 @@ private fun BeatBoxDesktop(
                                     updateState = UpdateUiState.Downloading(available, 0f)
                                     scope.launch {
                                         try {
-                                            // İlerleme arka planda hesaplanır, ekran ana iş parçacığında güncellenir.
+                                            /*
+                                             * İlerleme indirme iş parçacığından bildirilir; Compose
+                                             * durumu anlık görüntü (snapshot) tabanlı olduğu için
+                                             * doğrudan yazılabilir. `Dispatchers.Main` masaüstünde
+                                             * bulunmadığından ona geçmek indirmeyi bozuyordu.
+                                             * Yüzde değişmedikçe yeniden çizim tetiklenmez.
+                                             */
+                                            var lastPercent = -1
                                             val installer = DesktopUpdateChecker.downloadInstaller { progress ->
-                                                withContext(Dispatchers.Main) {
+                                                val percent = (progress * 100).toInt()
+                                                if (percent != lastPercent) {
+                                                    lastPercent = percent
                                                     updateState = UpdateUiState.Downloading(available, progress)
                                                 }
                                             }
@@ -789,6 +821,11 @@ private fun BeatBoxDesktop(
                                         } catch (e: CancellationException) {
                                             throw e
                                         } catch (e: Exception) {
+                                            // Hata nedeni arayüzde gösterilmediği için tanılama dosyasına yazılır.
+                                            runCatching {
+                                                File(System.getProperty("java.io.tmpdir"), "beatbox-update-error.log")
+                                                    .writeText(e.stackTraceToString())
+                                            }
                                             updateState = UpdateUiState.Failed
                                         }
                                     }

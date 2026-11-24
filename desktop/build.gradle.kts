@@ -107,6 +107,23 @@ compose.desktop {
             // WiX, kurulum paketinde ASCII dışı karakter kabul etmiyor (LGHT0311).
             description = "BeatBox music player for Windows"
             vendor = "BlackStack"
+
+            /*
+             * Windows paket bilgileri. Simge olmadan kurulan uygulama
+             * "Uygulamalar" listesinde genel Java simgesiyle ve düşük
+             * çözünürlüklü görünüyordu; upgradeUuid ise yeni sürümün aynı
+             * kaydı güncellemesini sağlar.
+             */
+            windows {
+                iconFile.set(project.file("icons/beatbox.ico"))
+                menuGroup = "BeatBox"
+                shortcut = true
+                // Kullanıcı kurulumu: uygulama içi güncelleme yönetici izni istemez.
+                perUserInstall = true
+                dirChooser = false
+                // Sabit kalması gerekir; değişirse kurulu kopyalar güncellenemez.
+                upgradeUuid = "b110e892-7c54-4730-b180-a5d1cba1617d"
+            }
         }
     }
 }
