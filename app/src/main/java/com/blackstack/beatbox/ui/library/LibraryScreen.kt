@@ -107,50 +107,76 @@ fun LibraryScreen(
         }
     }
 
-    val favoriteSongs = remember(songsSorted, favoriteIds) {
-        songsSorted.filter { favoriteIds.contains(it.id.toString()) }
+    // Albüm/sanatçı/klasör grupları yalnızca o görünüm açıkken hesaplanır.
+    // Kitaplık etiket geçişi listeyi sık yenilediğinden, varsayılan "Hepsi"
+    // görünümünde her partide üç ayrı gruplama + sıralama yapılması zayıf
+    // cihazda kaydırmayı kilitliyordu.
+    val favoriteSongs = if (filter == LibraryFilter.FAVORITES) {
+        remember(songsSorted, favoriteIds) {
+            songsSorted.filter { favoriteIds.contains(it.id.toString()) }
+        }
+    } else {
+        emptyList()
     }
 
     // "Hepsi" görünümü her zaman A-Z sıralıdır; harf başlıkları buna dayanır.
-    val alphabetical = remember(songsSorted) { sortedByTitle(songsSorted) }
-    val songGroups = remember(alphabetical) {
-        alphabetical.groupBy { libraryLetter(it.title) }
-    }
-
-    val albums = remember(songsSorted, strings) {
+    val alphabetical = if (filter == LibraryFilter.ALL || filter == LibraryFilter.SONGS) {
+        remember(songsSorted) { sortedByTitle(songsSorted) }
+    } else {
         songsSorted
-            .groupBy { song ->
-                if (song.albumId > 0) "album-${song.albumId}" else "folder-${song.folderName}"
-            }
-            .map { (key, songs) ->
-                val first = songs.first()
-                LibraryAlbum(
-                    key = key,
-                    title = first.albumName
-                        ?.takeIf { it.isNotBlank() }
-                        ?: first.folderName.ifBlank { strings.get("unknown_album") },
-                    artist = first.albumArtist
-                        ?.takeIf { it.isNotBlank() && !it.equals("<unknown>", true) }
-                        ?: first.artist.takeIf { !it.equals("<unknown>", true) }
-                        ?: strings.get("unknown_artist"),
-                    songs = sortedByTitle(songs)
-                )
-            }
-            .let { sortedByLibraryKey(it) { album -> album.title } }
+    }
+    val songGroups = if (filter == LibraryFilter.ALL) {
+        remember(alphabetical) { alphabetical.groupBy { libraryLetter(it.title) } }
+    } else {
+        emptyMap()
     }
 
-    val artists = remember(songsSorted, strings) {
-        groupSongsByArtist(songsSorted, strings.get("unknown_artist"))
-            .entries
-            .toList()
-            .let { sortedByLibraryKey(it) { entry -> entry.key } }
+    val albums = if (filter == LibraryFilter.ALBUMS) {
+        remember(songsSorted, strings) {
+            songsSorted
+                .groupBy { song ->
+                    if (song.albumId > 0) "album-${song.albumId}" else "folder-${song.folderName}"
+                }
+                .map { (key, songs) ->
+                    val first = songs.first()
+                    LibraryAlbum(
+                        key = key,
+                        title = first.albumName
+                            ?.takeIf { it.isNotBlank() }
+                            ?: first.folderName.ifBlank { strings.get("unknown_album") },
+                        artist = first.albumArtist
+                            ?.takeIf { it.isNotBlank() && !it.equals("<unknown>", true) }
+                            ?: first.artist.takeIf { !it.equals("<unknown>", true) }
+                            ?: strings.get("unknown_artist"),
+                        songs = sortedByTitle(songs)
+                    )
+                }
+                .let { sortedByLibraryKey(it) { album -> album.title } }
+        }
+    } else {
+        emptyList()
     }
 
-    val folders = remember(songsSorted) {
-        songsSorted
-            .groupBy { it.folderName.ifBlank { "/" } }
-            .map { (name, songs) -> LibraryFolder(name, sortedByTitle(songs)) }
-            .let { sortedByLibraryKey(it) { folder -> folder.name } }
+    val artists = if (filter == LibraryFilter.ARTISTS) {
+        remember(songsSorted, strings) {
+            groupSongsByArtist(songsSorted, strings.get("unknown_artist"))
+                .entries
+                .toList()
+                .let { sortedByLibraryKey(it) { entry -> entry.key } }
+        }
+    } else {
+        emptyList()
+    }
+
+    val folders = if (filter == LibraryFilter.FOLDERS) {
+        remember(songsSorted) {
+            songsSorted
+                .groupBy { it.folderName.ifBlank { "/" } }
+                .map { (name, songs) -> LibraryFolder(name, sortedByTitle(songs)) }
+                .let { sortedByLibraryKey(it) { folder -> folder.name } }
+        }
+    } else {
+        emptyList()
     }
 
     val totalMinutes = remember(allAudioList) {

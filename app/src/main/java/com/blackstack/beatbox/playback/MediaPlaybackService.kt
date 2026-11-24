@@ -597,10 +597,21 @@ class MediaPlaybackService : Service(), AudioManager.OnAudioFocusChangeListener 
             }
             
             visualizer?.release()
+            // Visualizer yakalama boyutu ve hızı ses iş parçacığında her turda
+            // CPU harcar. Zayıf cihazlarda en küçük pencere ve yarı hız yeterli;
+            // görsel çubuklar 15 kutuya indirgendiği için fark fark edilmez.
+            val reduced = com.blackstack.beatbox.performance.DevicePerformance.isEnabled(this)
+            val captureRange = Visualizer.getCaptureSizeRange()
+            val desiredCapture = if (reduced) captureRange.first() else captureRange.last()
+            val desiredRate = if (reduced) {
+                (Visualizer.getMaxCaptureRate() / 2).coerceAtLeast(2500)
+            } else {
+                Visualizer.getMaxCaptureRate()
+            }
             visualizer = Visualizer(sessionId).apply {
                 // Use larger capture size for better frequency resolution
-                captureSize = Visualizer.getCaptureSizeRange()[1] // Use max size
-                android.util.Log.d("BeatBox", "Visualizer setup - captureSize: $captureSize, sessionId: $sessionId")
+                captureSize = desiredCapture
+                android.util.Log.d("BeatBox", "Visualizer setup - captureSize: $captureSize, sessionId: $sessionId, reduced: $reduced")
                 setDataCaptureListener(
                     object : Visualizer.OnDataCaptureListener {
                         override fun onWaveFormDataCapture(
@@ -658,7 +669,7 @@ class MediaPlaybackService : Service(), AudioManager.OnAudioFocusChangeListener 
                             // Şimdilik FFT kullanılmıyor
                         }
                     },
-                    Visualizer.getMaxCaptureRate(), // Max capture rate for smoother animation
+                    desiredRate,
                     true,
                     false
                 )

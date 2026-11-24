@@ -49,6 +49,8 @@ import com.blackstack.beatbox.library.rememberLibraryState
 import com.blackstack.beatbox.library.requiredAudioPermissions
 import com.blackstack.beatbox.playback.restoreSession
 import com.blackstack.beatbox.ui.components.updateSongStats
+import com.blackstack.beatbox.performance.DevicePerformance
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -71,10 +73,11 @@ fun BeatBoxApp(
     var hasPermission by remember { mutableStateOf(hasAudioPermission(ctx)) }
     RequestLegacyWritePermission(hasPermission)
     // Tempo görselleştirme anahtarı; mikrofon geri çağrısı da bunu açar.
+    // Cihaz sınıfından gelen otomatik performans modu da dikkate alınır.
     var tempoViz by remember {
         mutableStateOf(
             prefs.getBoolean("tempo_visualization", true) &&
-            !prefs.getBoolean("performance_mode", false) // Disable if performance mode is on
+            !DevicePerformance.isEnabled(ctx)
         )
     }
 
@@ -137,11 +140,23 @@ fun BeatBoxApp(
     var isPlaying by player.isPlaying
 
     // Kitaplık veya çevrim içi bilgiler güncellendiğinde çalan şarkıyı ve
-    // kuyruğu aynı zenginleştirilmiş meta verilerle tazele.
+    // kuyruğu aynı zenginleştirilmiş meta verilerle tazele. Etiket geçişi
+    // kitaplığı 25'lik parçalarla yenilediği için her parçada O(n) harita
+    // kurmak yerine değişiklikler kısa bir gecikmeyle birleştirilir; ayrıca
+    // değer gerçekten değişmedikçe durum atanmaz.
     LaunchedEffect(allAudioList) {
+        delay(150)
+        val audio = currentAudio
+        val playlist = currentPlaylist
+        if (audio == null && playlist.isEmpty()) return@LaunchedEffect
         val byId = allAudioList.associateBy { it.id }
-        currentAudio = currentAudio?.let { byId[it.id] ?: it }
-        if (currentPlaylist.isNotEmpty()) currentPlaylist = currentPlaylist.map { byId[it.id] ?: it }
+        audio?.let { byId[it.id] }?.let { fresh ->
+            if (fresh != audio) currentAudio = fresh
+        }
+        if (playlist.isNotEmpty()) {
+            val refreshed = playlist.map { byId[it.id] ?: it }
+            if (refreshed != playlist) currentPlaylist = refreshed
+        }
     }
 
     var isShuffle by remember { mutableStateOf(false) }

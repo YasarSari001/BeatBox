@@ -9,6 +9,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
@@ -19,7 +21,10 @@ import com.blackstack.beatbox.ui.components.VisualizerState
 import com.blackstack.beatbox.Strings
 import com.blackstack.beatbox.groupSongsByArtist
 import com.blackstack.beatbox.ui.components.PullToRefresh
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.withContext
 
 /**
  * Ana sayfa: selamlama, devam eden çalma sahnesi ve kişisel raflar.
@@ -67,40 +72,53 @@ fun HomeScreen(
             .collect { visible -> onCompactBarVisibleChange?.invoke(visible) }
     }
 
-    // "Senin için": en çok dinlenenler; henüz veri yoksa en yeni parçalar.
-    val topSongs = remember(allAudioList, currentAudioId, prefs) {
-        allAudioList
-            .sortedWith(
-                compareByDescending<AudioFile> { prefs.getInt("stats_count_${it.id}", 0) }
-                    .thenByDescending { it.dateAdded }
-            )
-            .take(10)
+    // Kitaplık etiket geçişi sırasında 25'lik parçalarla yenilenir. Rafları her
+    // parçada ana iş parçacığında yeniden sıralamak kaydırmayı kilitler; bu
+    // yüzden hesaplama arka planda yapılır ve parçalar kısa bir gecikmeyle
+    // birleştirilir. Önceki sonuç, yeni sonuç hazır olana kadar korunur.
+    val sections by produceState(
+        initialValue = HomeSections.EMPTY,
+        allAudioList,
+        currentAudioId,
+        strings,
+        prefs
+    ) {
+        value = withContext(Dispatchers.Default) {
+            delay(200)
+            val stats = prefs.all
+            val top = allAudioList
+                .sortedWith(
+                    compareByDescending<AudioFile> {
+                        (stats["stats_count_${it.id}"] as? Number)?.toInt() ?: 0
+                    }.thenByDescending { it.dateAdded }
+                )
+                .take(10)
+            val recentlyAdded = allAudioList
+                .sortedByDescending { it.dateAdded }
+                .take(6)
+            val recentlyPlayed = run {
+                val byId = allAudioList.associateBy { it.id }
+                prefs.getString("stats_history", "")
+                    .orEmpty()
+                    .split(',')
+                    .asSequence()
+                    .mapNotNull { it.trim().toLongOrNull() }
+                    .mapNotNull { byId[it] }
+                    .distinctBy { it.id }
+                    .take(8)
+                    .toList()
+            }
+            val artists = groupSongsByArtist(allAudioList, strings.get("unknown_artist"))
+                .entries
+                .sortedByDescending { it.value.size }
+                .take(12)
+            HomeSections(top, recentlyAdded, recentlyPlayed, artists)
+        }
     }
-
-    val recentlyAdded = remember(allAudioList) {
-        allAudioList.sortedByDescending { it.dateAdded }.take(6)
-    }
-
-    // Dinleme geçmişi kimlik listesi olarak tutulur; ekran tarafında çözülür.
-    val recentlyPlayed = remember(allAudioList, currentAudioId, prefs) {
-        val byId = allAudioList.associateBy { it.id }
-        prefs.getString("stats_history", "")
-            .orEmpty()
-            .split(',')
-            .asSequence()
-            .mapNotNull { it.trim().toLongOrNull() }
-            .mapNotNull { byId[it] }
-            .distinctBy { it.id }
-            .take(8)
-            .toList()
-    }
-
-    val artists = remember(allAudioList, strings) {
-        groupSongsByArtist(allAudioList, strings.get("unknown_artist"))
-            .entries
-            .sortedByDescending { it.value.size }
-            .take(12)
-    }
+    val topSongs = sections.topSongs
+    val recentlyAdded = sections.recentlyAdded
+    val recentlyPlayed = sections.recentlyPlayed
+    val artists = sections.artists
 
     val totalMinutes = remember(prefs, currentAudioId) {
         prefs.getLong("stats_total_minutes", 0L)
@@ -207,4 +225,16 @@ internal fun greetingKeyForHour(hour: Int): String = when (hour) {
     in 5..11 -> "good_morning"
     in 12..17 -> "good_afternoon"
     else -> "good_evening"
+}
+
+/** Ana sayfa raflarının arka planda hesaplanmış hali. */
+private data class HomeSections(
+    val topSongs: List<AudioFile>,
+    val recentlyAdded: List<AudioFile>,
+    val recentlyPlayed: List<AudioFile>,
+    val artists: List<Map.Entry<String, List<AudioFile>>>
+) {
+    companion object {
+        val EMPTY = HomeSections(emptyList(), emptyList(), emptyList(), emptyList())
+    }
 }

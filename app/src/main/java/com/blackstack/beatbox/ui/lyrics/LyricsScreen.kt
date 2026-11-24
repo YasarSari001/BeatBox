@@ -73,6 +73,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -89,6 +90,7 @@ import androidx.compose.ui.unit.sp
 import com.blackstack.beatbox.ui.theme.AuroraBlack
 import com.blackstack.beatbox.ui.theme.BeatBoxMotion
 import com.blackstack.beatbox.ui.theme.LocalReducedMotion
+import com.blackstack.beatbox.ui.theme.rememberPerformanceMode
 import kotlinx.coroutines.launch
 import com.blackstack.beatbox.ui.components.AlbumArtImage
 import com.blackstack.beatbox.AudioFile
@@ -142,6 +144,9 @@ fun LyricsScreen(
     val primaryColor = MaterialTheme.colorScheme.primary
     val secondaryColor = MaterialTheme.colorScheme.secondary
     val reducedMotion = LocalReducedMotion.current
+    // Bu ekranın arka planı üç tam ekran katman çizer; zayıf cihazda
+    // animasyonlar ve blur sürekli kare harcar.
+    val performanceMode = rememberPerformanceMode()
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
     val ctx = LocalContext.current
@@ -171,26 +176,38 @@ fun LyricsScreen(
         .takeIf { it.isNotBlank() && it != "<unknown>" }
         ?: strings.get("unknown_artist")
 
-    // Nefes alan albüm kapağı ve yavaş ışık taraması.
-    val ambient = rememberInfiniteTransition(label = "lyrics_ambient")
-    val breath by ambient.animateFloat(
-        initialValue = 1f,
-        targetValue = if (reducedMotion) 1f else 1.035f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(6_000),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "lyrics_ambient_breath"
-    )
-    val sweep by ambient.animateFloat(
-        initialValue = -0.55f,
-        targetValue = if (reducedMotion) -0.55f else 0.55f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(9_000),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "lyrics_ambient_sweep"
-    )
+    // Nefes alan albüm kapağı ve yavaş ışık taraması. Performans modunda
+    // sonsuz animasyon hiç kurulmaz; değerler sabit kalır ve kare üretilmez.
+    val ambient = if (reducedMotion || performanceMode) {
+        null
+    } else {
+        rememberInfiniteTransition(label = "lyrics_ambient")
+    }
+    val breath: Float
+    val sweep: Float
+    if (ambient == null) {
+        breath = 1f
+        sweep = -0.55f
+    } else {
+        breath = ambient.animateFloat(
+            initialValue = 1f,
+            targetValue = 1.035f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(6_000),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "lyrics_ambient_breath"
+        ).value
+        sweep = ambient.animateFloat(
+            initialValue = -0.55f,
+            targetValue = 0.55f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(9_000),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "lyrics_ambient_sweep"
+        ).value
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(AuroraBlack)) {
         Box(
@@ -203,71 +220,76 @@ fun LyricsScreen(
                 }
         ) {
             // 1) Albüm kapağı: API 31+ cihazlarda gerçek blur, eski cihazlarda
-            //    düşük opaklıkta doku olarak kalır.
+            //    düşük opaklıkta doku olarak kalır. Performans modunda blur
+            //    tam ekran render effect maliyeti nedeniyle atlanır.
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {
                         scaleX = breath
                         scaleY = breath
-                        alpha = 0.18f
+                        alpha = if (performanceMode) 0.10f else 0.18f
                     }
             ) {
                 AlbumArtImage(
                     a = audio,
                     modifier = Modifier
                         .fillMaxSize()
-                        .blur(96.dp)
+                        .then(if (performanceMode) Modifier else Modifier.blur(96.dp))
                 )
             }
 
             // 2) Aurora ışıkları: tema renklerinden iki yumuşak leke.
+            //    Fırçalar boyut değişmedikçe yeniden kurulmaz.
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .drawBehind {
-                        drawRect(
-                            brush = Brush.radialGradient(
-                                colors = listOf(
-                                    primaryColor.copy(alpha = 0.30f),
-                                    Color.Transparent
-                                ),
-                                center = Offset(size.width * 0.12f, size.height * 0.16f),
-                                radius = size.width * 1.15f
-                            )
+                    .drawWithCache {
+                        val topGlow = Brush.radialGradient(
+                            colors = listOf(
+                                primaryColor.copy(alpha = 0.30f),
+                                Color.Transparent
+                            ),
+                            center = Offset(size.width * 0.12f, size.height * 0.16f),
+                            radius = size.width * 1.15f
                         )
-                        drawRect(
-                            brush = Brush.radialGradient(
-                                colors = listOf(
-                                    secondaryColor.copy(alpha = 0.20f),
-                                    Color.Transparent
-                                ),
-                                center = Offset(size.width * 0.95f, size.height * 0.64f),
-                                radius = size.width * 1.0f
-                            )
+                        val bottomGlow = Brush.radialGradient(
+                            colors = listOf(
+                                secondaryColor.copy(alpha = 0.20f),
+                                Color.Transparent
+                            ),
+                            center = Offset(size.width * 0.95f, size.height * 0.64f),
+                            radius = size.width * 1.0f
                         )
+                        onDrawBehind {
+                            drawRect(brush = topGlow)
+                            drawRect(brush = bottomGlow)
+                        }
                     }
             )
 
-            // 3) Yavaş ışık taraması.
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .drawBehind {
-                        val centerX = size.width * (0.5f + sweep)
-                        drawRect(
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    Color.White.copy(alpha = 0.05f),
-                                    Color.Transparent
-                                ),
-                                start = Offset(centerX - size.width * 0.4f, 0f),
-                                end = Offset(centerX + size.width * 0.4f, size.height)
+            // 3) Yavaş ışık taraması: yalnızca animasyon zamanlayıcısı yokken
+            //    anlamlıdır; performans modunda katman hiç eklenmez.
+            if (!performanceMode) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .drawBehind {
+                            val centerX = size.width * (0.5f + sweep)
+                            drawRect(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(
+                                        Color.Transparent,
+                                        Color.White.copy(alpha = 0.05f),
+                                        Color.Transparent
+                                    ),
+                                    start = Offset(centerX - size.width * 0.4f, 0f),
+                                    end = Offset(centerX + size.width * 0.4f, size.height)
+                                )
                             )
-                        )
-                    }
-            )
+                        }
+                )
+            }
 
             // 4) Okunabilirlik için vinyet.
             Box(

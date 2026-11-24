@@ -70,6 +70,7 @@ import com.blackstack.beatbox.ui.components.EmptyArtKind
 import com.blackstack.beatbox.ui.components.EmptyStateArt
 import com.blackstack.beatbox.ui.theme.BeatBoxMotion
 import com.blackstack.beatbox.ui.theme.LocalReducedMotion
+import com.blackstack.beatbox.ui.theme.rememberPerformanceMode
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlin.math.abs
@@ -516,16 +517,22 @@ private fun KaraokeText(
 @Composable
 internal fun LyricsLoadingState(strings: Strings) {
     val reducedMotion = LocalReducedMotion.current
-    val transition = rememberInfiniteTransition(label = "lyrics_loading")
-    val pulse by transition.animateFloat(
-        initialValue = 0.35f,
-        targetValue = if (reducedMotion) 0.35f else 0.85f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1_100),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "lyrics_loading_pulse"
-    )
+    val performanceMode = rememberPerformanceMode()
+    val pulse: Float
+    if (reducedMotion || performanceMode) {
+        pulse = 0.35f
+    } else {
+        val transition = rememberInfiniteTransition(label = "lyrics_loading")
+        pulse = transition.animateFloat(
+            initialValue = 0.35f,
+            targetValue = 0.85f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1_100),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "lyrics_loading_pulse"
+        ).value
+    }
     val widths = listOf(0.92f, 0.74f, 0.86f, 0.58f)
 
     Box(

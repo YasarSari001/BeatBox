@@ -103,6 +103,7 @@ import com.blackstack.beatbox.ui.components.cardShadow
 import com.blackstack.beatbox.library.hasManageExternalStoragePermission
 import com.blackstack.beatbox.ui.components.iconButtonShadow
 import com.blackstack.beatbox.ui.theme.ThemeConfig
+import com.blackstack.beatbox.ui.theme.DeviceProfile
 
 private enum class SettingsPage {
     MAIN,
@@ -319,16 +320,17 @@ private fun MainSettingsPage(
                             },
                         )
                         SettingsDivider()
-                        var performanceMode by remember {
-                            mutableStateOf(prefs.getBoolean("performance_mode", false))
-                        }
+                        // Etkin değer cihaz sınıfını da kapsar: zayıf cihazda
+                        // mod otomatik açık görünür. Kullanıcı düğmeye
+                        // dokunduğunda açık bir tercih kaydedilir ve efektler
+                        // yeniden başlatma gerekmeden anında değişir.
+                        val performanceMode = DeviceProfile.isReduced(ctx)
                         SettingsToggleRow(
                             icon = Icons.Rounded.Speed,
                             title = strings.get("performance_mode"),
                             checked = performanceMode,
                             onCheckedChange = { enabled ->
-                                performanceMode = enabled
-                                prefs.edit { putBoolean("performance_mode", enabled) }
+                                DeviceProfile.setEnabled(ctx, enabled)
                                 if (enabled) {
                                     onTempoVizChange(false)
                                     prefs.edit { putBoolean("tempo_visualization", false) }

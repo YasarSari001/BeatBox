@@ -1,6 +1,6 @@
 {
-  "versionCode": 13,
-  "versionName": "3.9.1",
+  "versionCode": 14,
+  "versionName": "3.9.2",
   "apkUrl": "https://github.com/YasarSari001/BeatBox/releases/latest/download/BeatBox.apk",
-  "changelog": "BeatBox 3.9.1\n• Oynatılamayan şarkılar artık sessizce atlanmıyor; kapak üzerinde uyarı gösteriliyor\n• Şarkı adı ve sanatçı düzeltmeleri dosyaya yazılmıyor, yalnızca uygulamada gösteriliyor; \"(Official Video)\" gibi dağıtım etiketleri gizleniyor\n• Çevrim içi müzik altyapısı ve indirme menüsü kaldırıldı; eski sürümlerin bıraktığı çevrim içi kayıtlar açılışta temizleniyor\n• Alt menü göstergesi ve arka plan hareketleri kare başına daha az yeniden çizim yapıyor"
+  "changelog": "BeatBox 3.9.2\n• Performans modu artık cihazın sınıfına göre (RAM, çekirdek, Android sürümü) otomatik devreye giriyor; ayar değişince uygulama yeniden başlatmadan uygulanıyor\n• Kitaplık etiket taraması arka planda ve sınırlı sıklıkta uygulanıyor; kaydırma sırasındaki takılmalar giderildi\n• Ana sayfa rafları arka planda hesaplanıyor, liste yenilenirken ekran kilitlenmiyor\n• Renk geçiş animasyonları, aurora arka planı ve şarkı sözü efektleri performans modunda tamamen duruyor\n• Görselleştirici ve albüm rengi çıkarma zayıf cihazlarda daha az kaynak harcıyor\n• Şarkı sözü ekranındaki gradyanlar önbelleğe alındı, çizim maliyeti düştü"
 }

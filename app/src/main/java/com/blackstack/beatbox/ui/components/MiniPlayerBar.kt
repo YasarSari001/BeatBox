@@ -1,6 +1,7 @@
 package com.blackstack.beatbox.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -64,6 +65,7 @@ import com.blackstack.beatbox.AudioFile
 import com.blackstack.beatbox.ui.components.ExplicitBadge
 import com.blackstack.beatbox.Strings
 import com.blackstack.beatbox.ui.theme.BeatBoxMotion
+import com.blackstack.beatbox.ui.theme.rememberPerformanceMode
 import kotlinx.coroutines.delay
 import kotlin.math.abs
 
@@ -91,6 +93,9 @@ fun MiniPlayerBar(
 ) {
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     var rawProgress by remember(audio?.id) { mutableFloatStateOf(0f) }
+    // İlerleme çubuğu ikinci sınıf bir göstergedir: performans modunda daha
+    // seyrek yoklanır ve ara değerler animasyonla değil doğrudan uygulanır.
+    val performanceMode = rememberPerformanceMode()
 
     // Mini oynatıcı görünürlükten çıkınca ölçü unutulur; tam ekran oynatıcı
     // bayat bir konumdan büyümeye başlamaz.
@@ -98,20 +103,26 @@ fun MiniPlayerBar(
         onDispose { onArtBoundsChange(null) }
     }
 
-    LaunchedEffect(audio?.id, isPlaying) {
+    LaunchedEffect(audio?.id, isPlaying, performanceMode) {
         if (audio == null) {
             rawProgress = 0f
             return@LaunchedEffect
         }
         while (true) {
             rawProgress = progress().coerceIn(0f, 1f)
-            delay(if (isPlaying) 500 else 1_500)
+            delay(
+                when {
+                    !isPlaying -> 1_500
+                    performanceMode -> 1_000
+                    else -> 500
+                }
+            )
         }
     }
 
     val animatedProgress by animateFloatAsState(
         targetValue = rawProgress,
-        animationSpec = tween(380),
+        animationSpec = if (performanceMode) snap() else tween(380),
         label = "mini_player_progress"
     )
 

@@ -384,9 +384,13 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         // parametresi olarak tüm ağaca geçtiği için çalma sırasında bütün ekran
         // saniyede sekiz kez yeniden compose ediliyordu.
         val visualizerState = remember { VisualizerState() }
+        // Görselleştirici verisi yalnızca çizen bileşenleri geçersiz kılar ama
+        // zayıf cihazda 8 FPS bile yeterli kare bütçesi bırakmaz; kısılmış
+        // modda ~3 FPS'te güncellenir.
+        val performanceMode = com.blackstack.beatbox.ui.theme.rememberPerformanceMode()
 
         // Optimized polling: Only polls when playing, saving CPU & eliminating background lag
-        LaunchedEffect(isPlaying.value) {
+        LaunchedEffect(isPlaying.value, performanceMode) {
             if (isPlaying.value) {
                 withContext(Dispatchers.Default) {
                     while (isActive && isPlaying.value) {
@@ -399,7 +403,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                         } catch (e: Exception) {
                             // Ignore errors silently
                         }
-                        delay(120) // ~8 FPS, ultra smooth & zero lag
+                        delay(if (performanceMode) 300 else 120)
                     }
                 }
             } else {
@@ -461,9 +465,15 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         val currAudio by currentAudio
         var artworkColors by remember { mutableStateOf<PlayerArtworkColors?>(null) }
 
-        LaunchedEffect(currAudio?.id) {
+        LaunchedEffect(
+            currAudio?.id,
+            themeConfig.materialYou,
+            themeConfig.dynamicTheme
+        ) {
             val audio = currAudio
-            if (audio == null) {
+            // Albüm rengi yalnızca dinamik renk açıkken tohum olarak kullanılır.
+            // Kapalıyken her şarkıda Palette çalıştırmak boşa CPU harcar.
+            if (audio == null || !themeConfig.materialYou || !themeConfig.dynamicTheme) {
                 artworkColors = null
                 return@LaunchedEffect
             }

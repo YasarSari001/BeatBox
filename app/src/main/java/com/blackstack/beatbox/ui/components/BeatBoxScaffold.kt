@@ -440,23 +440,25 @@ fun BeatBoxScaffold(
             BeatBoxBottomBar(
                 selectedTab = selectedTab,
                 onTabSelected = onTabSelected,
-                items = listOf(
-                    BeatBoxNavItem(
-                        icon = Icons.Outlined.Home,
-                        selectedIcon = Icons.Rounded.Home,
-                        label = strings.get("home")
-                    ),
-                    BeatBoxNavItem(
-                        icon = Icons.AutoMirrored.Outlined.QueueMusic,
-                        selectedIcon = Icons.AutoMirrored.Rounded.QueueMusic,
-                        label = strings.get("playlists_short")
-                    ),
-                    BeatBoxNavItem(
-                        icon = Icons.Outlined.LibraryMusic,
-                        selectedIcon = Icons.Rounded.LibraryMusic,
-                        label = strings.get("library")
+                items = remember(strings.lang) {
+                    listOf(
+                        BeatBoxNavItem(
+                            icon = Icons.Outlined.Home,
+                            selectedIcon = Icons.Rounded.Home,
+                            label = strings.get("home")
+                        ),
+                        BeatBoxNavItem(
+                            icon = Icons.AutoMirrored.Outlined.QueueMusic,
+                            selectedIcon = Icons.AutoMirrored.Rounded.QueueMusic,
+                            label = strings.get("playlists_short")
+                        ),
+                        BeatBoxNavItem(
+                            icon = Icons.Outlined.LibraryMusic,
+                            selectedIcon = Icons.Rounded.LibraryMusic,
+                            label = strings.get("library")
+                        )
                     )
-                )
+                }
             )
         }
     },

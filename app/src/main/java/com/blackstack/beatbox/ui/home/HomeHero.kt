@@ -56,6 +56,7 @@ import com.blackstack.beatbox.ui.components.AlbumArtImage
 import com.blackstack.beatbox.AudioFile
 import com.blackstack.beatbox.Strings
 import com.blackstack.beatbox.ui.theme.LocalReducedMotion
+import com.blackstack.beatbox.ui.theme.rememberPerformanceMode
 import kotlinx.coroutines.delay
 // ---------------------------------------------------------------------------
 // Hero: devam eden çalma veya keşfet daveti
@@ -79,23 +80,30 @@ internal fun HomeHero(
     val shape = RoundedCornerShape(28.dp)
     val haptic = LocalHapticFeedback.current
     val reducedMotion = LocalReducedMotion.current
+    val performanceMode = rememberPerformanceMode()
     val audio = currentAudio
     val playing = audio != null && isPlaying
 
     var rawProgress by remember(audio?.id) { mutableFloatStateOf(0f) }
-    LaunchedEffect(audio?.id, isPlaying) {
+    LaunchedEffect(audio?.id, isPlaying, performanceMode) {
         if (audio == null) {
             rawProgress = 0f
             return@LaunchedEffect
         }
         while (true) {
             rawProgress = progress().coerceIn(0f, 1f)
-            delay(if (isPlaying) 700 else 2_000)
+            delay(
+                when {
+                    !isPlaying -> 2_000
+                    performanceMode -> 1_500
+                    else -> 700
+                }
+            )
         }
     }
     val animatedProgress by animateFloatAsState(
         targetValue = rawProgress,
-        animationSpec = if (reducedMotion) tween(0) else tween(420),
+        animationSpec = if (reducedMotion || performanceMode) tween(0) else tween(420),
         label = "home_hero_progress"
     )
 

@@ -155,7 +155,9 @@ fun SplashScreen(
                 )
             }
         }
-        delay(1_500)
+        // Animasyonsuz modda splash statik bir görüntüdür; uzun bekletmenin
+        // bir faydası yok. Zayıf cihazlarda açılış algısı kısalır.
+        delay(if (reducedMotion) 500 else 1_500)
         onFinish()
     }
 

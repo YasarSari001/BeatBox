@@ -29,6 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import com.blackstack.beatbox.ui.theme.LocalReducedMotion
+import com.blackstack.beatbox.ui.theme.rememberPerformanceMode
 
 /**
  * İlk kütüphane taraması sürerken gösterilen iskelet.
@@ -39,7 +40,8 @@ import com.blackstack.beatbox.ui.theme.LocalReducedMotion
 @Composable
 fun BeatBoxSkeleton(modifier: Modifier = Modifier) {
     val reducedMotion = LocalReducedMotion.current
-    val pulse: State<Float> = if (reducedMotion) {
+    val performanceMode = rememberPerformanceMode()
+    val pulse: State<Float> = if (reducedMotion || performanceMode) {
         remember { mutableStateOf(1f) }
     } else {
         val transition = rememberInfiniteTransition(label = "skeleton_pulse")

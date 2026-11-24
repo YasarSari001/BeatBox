@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.blackstack.beatbox.AudioFile
 import com.blackstack.beatbox.metadata.SongMetadataRepository
+import com.blackstack.beatbox.performance.DevicePerformance
 import com.blackstack.beatbox.ui.components.loadAudioFilesAndFolders
 
 /**
@@ -47,6 +48,9 @@ class LibraryState(
     private var selectedFolders: Set<String> = emptySet()
     private var minDurationSeconds = 30
     private var metadataJob: Job? = null
+    // Her parti listeyi baştan sona kopyalar; zayıf cihazda daha büyük
+    // partilerle daha az yeniden compose tetiklenir.
+    private val metadataBatchSize = if (DevicePerformance.isEnabled(context)) 60 else 25
     private val removedIds = java.util.Collections.synchronizedSet(mutableSetOf<Long>())
 
     /**
@@ -104,10 +108,13 @@ class LibraryState(
             try {
                 val selected = selectedFolders
                 val minDuration = minDurationSeconds
-                val (loaded, scannedFolders) = withContext(Dispatchers.IO) {
-                    loadAudioFilesAndFolders(context, minDuration, selected)
+                // Önbellekteki görünen meta verileri uygulamak dosya sistemi
+                // yoklaması yapar; ana iş parçacığında çalıştırılırsa tarama
+                // sonrası liste görünürken takılma yaratır.
+                val (enriched, scannedFolders) = withContext(Dispatchers.IO) {
+                    val (loaded, scanned) = loadAudioFilesAndFolders(context, minDuration, selected)
+                    SongMetadataRepository.applyCached(context, loaded) to scanned
                 }
-                val enriched = SongMetadataRepository.applyCached(context, loaded)
 
                 songs = enriched
                 folders = scannedFolders
@@ -142,9 +149,13 @@ class LibraryState(
     }
 
     private fun enrichUnknownArtists() {
-        scope.launch {
+        // Aday filtreleme binlerce SharedPreferences anahtarını okur; bu iş
+        // arka planda yapılır, sonuç ana iş parçacığında state'e yazılır.
+        scope.launch(Dispatchers.IO) {
             SongMetadataRepository.enrichUnknownArtists(context, songs) { id, artist, artworkPath ->
-                songs = SongMetadataRepository.applyResolved(songs, id, artist, artworkPath)
+               withContext(Dispatchers.Main) {
+                    songs = SongMetadataRepository.applyResolved(songs, id, artist, artworkPath)
+                }
             }
         }
     }
@@ -159,6 +170,7 @@ class LibraryState(
         metadataJob = scope.launch(Dispatchers.IO) {
             val updatedById = mutableMapOf<Long, AudioFile>()
             val batch = mutableListOf<AudioFile>()
+            var lastApplyAt = 0L
 
             for (song in scanned) {
                 if (!isActive) break
@@ -168,9 +180,17 @@ class LibraryState(
                     updatedById[song.id] = display
                     batch += display
                 }
-                if (batch.size >= 25) {
+                // Liste her uygulamada baştan sona kopyalanıp tüm kitaplık
+                // görünümleri yeniden hesaplanır. Parti büyüklüğüne ek olarak
+                // en fazla saniyede dört güncelleme yapılır; zayıf cihazda
+                // kaydırma sırasında art arda kare düşmesi engellenir.
+                val now = android.os.SystemClock.elapsedRealtime()
+                val due = batch.size >= metadataBatchSize ||
+                    (batch.isNotEmpty() && lastApplyAt != 0L && now - lastApplyAt >= 250L)
+                if (due) {
                     applyBatch(batch)
                     batch.clear()
+                    lastApplyAt = now
                 }
             }
             if (batch.isNotEmpty()) applyBatch(batch)

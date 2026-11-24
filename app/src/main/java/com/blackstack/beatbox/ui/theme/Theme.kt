@@ -52,15 +52,27 @@ fun BeatBoxTheme(
     val darkTheme = config.isDark(systemDark)
     val pureBlack = config.isPureBlack(systemDark)
 
+    // Renk şeması animasyonu her karede 48 rengi harmanlayıp tüm ağacı
+    // yeniden compose eder; zayıf cihazda şarkı değişiminde belirgin takılma
+    // yapar. Performans modunda doğrudan yeni şema uygulanır.
+    val performanceMode = rememberPerformanceMode()
     val baseScheme = remember(config, artworkSeedColor, darkTheme, context) {
         buildBeatBoxColorScheme(config, artworkSeedColor, darkTheme, context)
     }
     val colorScheme = remember(baseScheme, pureBlack) {
         if (pureBlack) baseScheme.pureBlack() else baseScheme
     }
-    val animatedScheme = animateColorScheme(colorScheme, config.uiEnhancements)
+    val animatedScheme = animateColorScheme(
+        colorScheme = colorScheme,
+        enabled = config.uiEnhancements && !performanceMode
+    )
 
-    CompositionLocalProvider(LocalReducedMotion provides rememberReducedMotion()) {
+    // Performans modu aynı zamanda "hareketi azalt" olarak yayınlanır; iskelet,
+    // boş durum, şarkı sözü yükleme ve liste geçişleri gibi tüm bileşenler
+    // animasyonlarını tek tek kontrol etmek zorunda kalmadan durur.
+    CompositionLocalProvider(
+        LocalReducedMotion provides (rememberReducedMotion() || performanceMode)
+    ) {
         MaterialTheme(
             colorScheme = animatedScheme,
             typography = BeatBoxTypography,
@@ -111,6 +123,10 @@ fun generateColorScheme(
     contrastLevel: Double = 0.0,
 ): ColorScheme {
     val seed = seedColor.toArgb()
+    // HCT şema üretimi ucuz değildir; ayarlar ekranındaki palet önizlemeleri ve
+    // aynı tohumun tekrar kullanımı için sonuçlar kısa süreliğine saklanır.
+    val cacheKey = "$seed|$darkTheme|${paletteStyle.name}|$contrastLevel"
+    schemeCache.get(cacheKey)?.let { return it }
     val hct = Hct.fromInt(seed)
     val scheme: DynamicScheme = when (paletteStyle) {
         ThemePaletteStyle.TONAL_SPOT -> SchemeTonalSpot(hct, darkTheme, contrastLevel)
@@ -122,8 +138,10 @@ fun generateColorScheme(
         ThemePaletteStyle.NEUTRAL -> SchemeNeutral(hct, darkTheme, contrastLevel)
         ThemePaletteStyle.CONTENT -> SchemeContent(hct, darkTheme, contrastLevel)
     }
-    return scheme.toColorScheme()
+    return scheme.toColorScheme().also { schemeCache.put(cacheKey, it) }
 }
+
+private val schemeCache = object : android.util.LruCache<String, ColorScheme>(16) {}
 
 /** Saf siyah modu; Metrolist'in `pureBlack` uzantısıyla aynıdır. */
 fun ColorScheme.pureBlack(): ColorScheme = copy(

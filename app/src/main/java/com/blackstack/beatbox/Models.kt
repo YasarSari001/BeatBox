@@ -29,6 +29,7 @@ data class Artist(
     val id: String? = null
 )
 
+@androidx.compose.runtime.Immutable
 data class AudioFile(
     val id: Long,
     val title: String,

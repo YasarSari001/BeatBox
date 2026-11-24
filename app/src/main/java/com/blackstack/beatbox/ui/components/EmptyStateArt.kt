@@ -9,7 +9,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -26,6 +25,7 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.blackstack.beatbox.ui.theme.LocalReducedMotion
+import com.blackstack.beatbox.ui.theme.rememberPerformanceMode
 
 /**
  * Boş durum illüstrasyon türleri.
@@ -53,16 +53,24 @@ fun EmptyStateArt(
     secondaryAccent: Color = MaterialTheme.colorScheme.secondary
 ) {
     val reducedMotion = LocalReducedMotion.current
-    val transition = rememberInfiniteTransition(label = "empty_art")
-    val glowAlpha by transition.animateFloat(
-        initialValue = 0.18f,
-        targetValue = if (reducedMotion) 0.18f else 0.30f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(3_600),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "empty_art_glow"
-    )
+    val performanceMode = rememberPerformanceMode()
+    // Hedef değer sabit kalsa bile sonsuz geçiş kare üretmeye devam eder;
+    // kısılmış modda hiç kurulmaz.
+    val glowAlpha: Float
+    if (reducedMotion || performanceMode) {
+        glowAlpha = 0.18f
+    } else {
+        val transition = rememberInfiniteTransition(label = "empty_art")
+        glowAlpha = transition.animateFloat(
+            initialValue = 0.18f,
+            targetValue = 0.30f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(3_600),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "empty_art_glow"
+        ).value
+    }
 
     Canvas(modifier = modifier.size(size)) {
         val s = this.size.minDimension

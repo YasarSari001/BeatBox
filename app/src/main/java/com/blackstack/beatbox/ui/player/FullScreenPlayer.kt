@@ -213,10 +213,10 @@ fun FullScreenPlayer(
 
     // Konum yalnızca oynatma sırasında ve kullanıcı çubuğu sürüklemiyorken
     // okunur; sürükleme sırasında değer parmakla birlikte ilerler.
-    LaunchedEffect(isPlaying) {
+    LaunchedEffect(isPlaying, performanceMode) {
         while (isPlaying) {
             if (!drag) pos = player.getCurrentPosition().toFloat()
-            delay(120)
+            delay(if (performanceMode) 300 else 120)
         }
     }
 
