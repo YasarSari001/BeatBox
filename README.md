@@ -52,6 +52,7 @@ indirme bağlantıları her yeni sürümde geçerli kalır.
 - Fotoğraf ızgarası ve tam ekran görüntüleyici (tekerlekle yakınlaştırma, önceki/sonraki)
 - Video oynatıcı: FFmpeg ile çözme, ses, ilerleme çubuğu, telefonla çekilen dikey videolarda doğru döndürme
 - Ayarlar: görünüm, ekolayzer, ses seviyesi, uyku zamanlayıcı, kitaplık klasörü, dil, hakkında
+- **Güncelleme denetimi:** Hakkında bölümünden `update.json` okunur; yeni sürüm varsa sabit adlı kurulum dosyası tarayıcıda açılır
 
 ## Desteklenen biçimler
 
@@ -97,7 +98,7 @@ export JAVA_HOME="$LOCALAPPDATA/BeatBox/jdk21/jdk-21.0.13.1+2"   # örnek yol
 
 Çıktılar:
 
-- Kurulum paketi: `desktop/build/compose/binaries/main/exe/BeatBox-3.9.2.exe`
+- Kurulum paketi: `desktop/build/compose/binaries/main/exe/BeatBox-3.9.3.exe`
   (yayına `BeatBox-windows.exe` adıyla yüklenir)
 - Taşınabilir sürüm: `desktop/build/compose/binaries/main/app/BeatBox/`
 
@@ -114,8 +115,9 @@ export JAVA_HOME="$LOCALAPPDATA/BeatBox/jdk21/jdk-21.0.13.1+2"   # örnek yol
 ## Sürümleme
 
 Sürüm bilgisi `app/build.gradle.kts` (`versionCode`, `versionName`) ve
-`desktop/build.gradle.kts` (`packageVersion`) içinde tutulur. Android tarafındaki
-güncelleme denetimi `update.json` dosyasını okur.
+`desktop/build.gradle.kts` (`packageVersion`) içinde tutulur; masaüstü tarafında
+`DesktopUpdateChecker` içindeki `VERSION_CODE` da aynı değere güncellenir.
+Her iki platformun güncelleme denetimi `update.json` dosyasını okur.
 
 ## Lisans
 

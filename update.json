@@ -1,6 +1,6 @@
 {
-  "versionCode": 14,
-  "versionName": "3.9.2",
+  "versionCode": 15,
+  "versionName": "3.9.3",
   "apkUrl": "https://github.com/YasarSari001/BeatBox/releases/latest/download/BeatBox.apk",
-  "changelog": "BeatBox 3.9.2\n• Performans modu artık cihazın sınıfına göre (RAM, çekirdek, Android sürümü) otomatik devreye giriyor; ayar değişince uygulama yeniden başlatmadan uygulanıyor\n• Kitaplık etiket taraması arka planda ve sınırlı sıklıkta uygulanıyor; kaydırma sırasındaki takılmalar giderildi\n• Ana sayfa rafları arka planda hesaplanıyor, liste yenilenirken ekran kilitlenmiyor\n• Renk geçiş animasyonları, aurora arka planı ve şarkı sözü efektleri performans modunda tamamen duruyor\n• Görselleştirici ve albüm rengi çıkarma zayıf cihazlarda daha az kaynak harcıyor\n• Şarkı sözü ekranındaki gradyanlar önbelleğe alındı, çizim maliyeti düştü"
+  "changelog": "BeatBox 3.9.3\n• Windows sürümü artık yeni sürümleri update.json üzerinden denetliyor\n• Denetim sonucu Hakkında ekranında görünüyor; yeni sürüm varsa sürüm notları ve tek tıkla indirme bağlantısı gösteriliyor\n• İndirme bağlantısı sabit dosya adı kullandığı için her sürümde geçerli kalıyor\n• Android tarafındaki davranış değişmedi"
 }

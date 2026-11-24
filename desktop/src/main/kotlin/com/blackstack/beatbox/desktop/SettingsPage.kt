@@ -49,6 +49,15 @@ import com.blackstack.beatbox.EQPreset
 import com.blackstack.beatbox.Strings
 import java.io.File
 
+/** Hakkında ekranındaki güncelleme denetiminin durumu. */
+sealed interface UpdateUiState {
+    data object Idle : UpdateUiState
+    data object Checking : UpdateUiState
+    data object UpToDate : UpdateUiState
+    data object Failed : UpdateUiState
+    data class Available(val update: DesktopUpdate) : UpdateUiState
+}
+
 /**
  * Masaüstü ayarları.
  *
@@ -82,6 +91,9 @@ fun SettingsPage(
     sleepMinutes: Int,
     onSleepMinutes: (Int) -> Unit,
     sleepRemaining: Long?,
+    updateState: UpdateUiState,
+    onCheckUpdate: () -> Unit,
+    onDownloadUpdate: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -288,9 +300,46 @@ fun SettingsPage(
         SettingsGroup(strings.get("about")) {
             SettingsRow(
                 icon = Icons.Rounded.Info,
-                title = "BeatBox 3.9.1",
+                title = "BeatBox ${DesktopUpdateChecker.VERSION_NAME}",
                 subtitle = strings.dt("desktop_build"),
             ) {}
+            SettingsDivider()
+            SettingsRow(
+                icon = Icons.Rounded.Refresh,
+                title = strings.get("update_check"),
+                subtitle = when (val state = updateState) {
+                    UpdateUiState.Idle, UpdateUiState.Checking -> strings.get("update_check_desc")
+                    UpdateUiState.UpToDate -> strings.get("update_up_to_date")
+                    UpdateUiState.Failed -> strings.get("update_check_failed")
+                    is UpdateUiState.Available ->
+                        "${strings.get("update_version")}: ${state.update.versionName}"
+                },
+            ) {
+                if (updateState is UpdateUiState.Available) {
+                    Chip(
+                        text = strings.get("update_download"),
+                        selected = true,
+                        onClick = onDownloadUpdate,
+                    )
+                } else {
+                    val checking = updateState is UpdateUiState.Checking
+                    Chip(
+                        text = if (checking) "…" else strings.get("update_check"),
+                        selected = false,
+                        onClick = { if (!checking) onCheckUpdate() },
+                    )
+                }
+            }
+            val available = updateState as? UpdateUiState.Available
+            if (available != null && available.update.changelog.isNotBlank()) {
+                SettingsDivider()
+                Text(
+                    text = available.update.changelog,
+                    fontSize = 11.5.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 48.dp, end = 8.dp, top = 2.dp, bottom = 12.dp),
+                )
+            }
             SettingsDivider()
             SettingsRow(
                 icon = Icons.Rounded.Info,

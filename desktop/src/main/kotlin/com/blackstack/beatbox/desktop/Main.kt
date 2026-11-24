@@ -94,7 +94,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.awt.Desktop
 import java.io.File
+import java.net.URI
 import java.util.Calendar
 import java.util.prefs.Preferences
 import javax.swing.JFileChooser
@@ -307,6 +309,7 @@ private fun BeatBoxDesktop(
     var viewingPhoto by remember { mutableStateOf<Track?>(null) }
     var playingVideo by remember { mutableStateOf<Track?>(null) }
     var editingTrack by remember { mutableStateOf<Track?>(null) }
+    var updateState by remember { mutableStateOf<UpdateUiState>(UpdateUiState.Idle) }
 
     val albumName: (Track) -> String = { track ->
         track.album.ifBlank { track.folderName }.ifBlank { strings.get("unknown_album") }
@@ -722,6 +725,27 @@ private fun BeatBoxDesktop(
                                 sleepUntil = if (minutes <= 0) null else System.currentTimeMillis() + minutes * 60_000L
                             },
                             sleepRemaining = sleepUntil?.let { sleepRemaining },
+                            updateState = updateState,
+                            onCheckUpdate = {
+                                if (updateState !is UpdateUiState.Checking) {
+                                    updateState = UpdateUiState.Checking
+                                    scope.launch {
+                                        updateState = when (val result = DesktopUpdateChecker.check()) {
+                                            is DesktopUpdateChecker.Result.Available ->
+                                                UpdateUiState.Available(result.update)
+                                            DesktopUpdateChecker.Result.UpToDate -> UpdateUiState.UpToDate
+                                            DesktopUpdateChecker.Result.Failed -> UpdateUiState.Failed
+                                        }
+                                    }
+                                }
+                            },
+                            onDownloadUpdate = {
+                                // Sabit asset adı sayesinde bağlantı her sürümde geçerli.
+                                runCatching {
+                                    Desktop.getDesktop()
+                                        .browse(URI.create(DesktopUpdateChecker.DOWNLOAD_URL))
+                                }.onFailure { error = DesktopUpdateChecker.DOWNLOAD_URL }
+                            },
                         )
                     }
 
