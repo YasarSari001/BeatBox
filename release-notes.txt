@@ -1,5 +1,5 @@
-BeatBox 3.9.3
-• Windows sürümü artık yeni sürümleri update.json üzerinden denetliyor
-• Denetim sonucu Hakkında ekranında görünüyor; yeni sürüm varsa sürüm notları ve tek tıkla indirme bağlantısı gösteriliyor
-• İndirme bağlantısı sabit dosya adı kullandığı için her sürümde geçerli kalıyor
-• Android tarafındaki davranış değişmedi
+BeatBox 3.9.4
+• Windows'ta kurulum artık sabit bir bekleme yerine uygulamanın gerçekten kapanmasını bekliyor
+• Önceki oturumlardan kalan geçici kurulum dosyaları açılışta temizleniyor
+• Sessiz güncelleme denetiminin zaman damgası yalnızca başarılı denetimden sonra yazılıyor; ağ hatası sonraki açılışta yeniden deneniyor
+• Sürüm numarası tek kaynaktan (version.properties) geliyor ve yayınlar etiketle otomatik üretiliyor
