@@ -53,8 +53,10 @@ jobs:
       - name: Testler
         run: ./gradlew --no-daemon :desktop:test
 
+      # packageExe tek başına taşınabilir uygulama dizinini bırakmaz;
+      # zip varlığı createDistributable çıktısından üretilir.
       - name: Windows kurulum paketi
-        run: ./gradlew --no-daemon :desktop:packageExe
+        run: ./gradlew --no-daemon :desktop:createDistributable :desktop:packageExe
 
       - name: Android APK
         run: ./gradlew --no-daemon :app:assembleDebug
@@ -62,9 +64,22 @@ jobs:
       - name: Paketleri sabit adlarla hazırla
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
           New-Item -ItemType Directory -Force -Path dist | Out-Null
-          Copy-Item "desktop/build/compose/binaries/main/exe/BeatBox-$env:VERSION.exe" "dist/BeatBox-windows.exe"
-          Compress-Archive -Path "desktop/build/compose/binaries/main/app/BeatBox" -DestinationPath "dist/BeatBox-windows.zip" -Force
+
+          # Kurulum paketi: çıktı adı sürüm içerdiği için kalıpla bulunur.
+          $exe = Get-ChildItem "desktop/build/compose/binaries/main/exe" -Filter "BeatBox-*.exe" |
+            Select-Object -First 1
+          if (-not $exe) { throw "Kurulum EXE'si bulunamadı." }
+          Copy-Item $exe.FullName "dist/BeatBox-windows.exe"
+
+          # Taşınabilir sürüm: uygulama dizininin içeriği zip köküne yazılır.
+          $appDir = Get-ChildItem "desktop/build/compose/binaries/main/app" -Directory |
+            Select-Object -First 1
+          if (-not $appDir) { throw "Uygulama dizini bulunamadı." }
+          Compress-Archive -Path (Join-Path $appDir.FullName "*") `
+            -DestinationPath "dist/BeatBox-windows.zip" -Force
+
           Copy-Item "app/build/outputs/apk/debug/app-debug.apk" "dist/BeatBox.apk"
           Get-ChildItem dist | Format-Table Name, Length
 
