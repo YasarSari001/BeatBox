@@ -1,0 +1,83 @@
+name: Release
+
+# Etiket itildiğinde (v3.9.3 gibi) paketleri derler ve sabit adlarla yayınlar.
+# Sürüm numarası version.properties'ten gelir; update.json tazeliği doğrulanır.
+
+on:
+  push:
+    tags:
+      - "v*"
+  # Elle deneme: yayın oluşturmadan derleme/doğrulama yapar.
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Gradle önbelleği
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Sürümü oku ve etiketle karşılaştır
+        shell: bash
+        run: |
+          code=$(grep -E '^version\.code=' version.properties | cut -d= -f2 | tr -d '[:space:]')
+          name=$(grep -E '^version\.name=' version.properties | cut -d= -f2 | tr -d '[:space:]')
+          echo "VERSION=$name" >> "$GITHUB_ENV"
+          echo "VERSION_CODE=$code" >> "$GITHUB_ENV"
+          if [ -z "$code" ] || [ -z "$name" ]; then
+            echo "version.properties okunamadı." >&2
+            exit 1
+          fi
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "v$name" != "$GITHUB_REF_NAME" ]; then
+            echo "Etiket ($GITHUB_REF_NAME) ile version.properties (v$name) uyuşmuyor." >&2
+            exit 1
+          fi
+
+      - name: update.json güncel mi
+        shell: bash
+        run: |
+          ./gradlew --no-daemon generateUpdateManifest
+          git diff --exit-code update.json
+
+      - name: Testler
+        run: ./gradlew --no-daemon :desktop:test
+
+      - name: Windows kurulum paketi
+        run: ./gradlew --no-daemon :desktop:packageExe
+
+      - name: Android APK
+        run: ./gradlew --no-daemon :app:assembleDebug
+
+      - name: Paketleri sabit adlarla hazırla
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item "desktop/build/compose/binaries/main/exe/BeatBox-$env:VERSION.exe" "dist/BeatBox-windows.exe"
+          Compress-Archive -Path "desktop/build/compose/binaries/main/app/BeatBox" -DestinationPath "dist/BeatBox-windows.zip" -Force
+          Copy-Item "app/build/outputs/apk/debug/app-debug.apk" "dist/BeatBox.apk"
+          Get-ChildItem dist | Format-Table Name, Length
+
+      - name: Yayını oluştur
+        if: github.ref_type == 'tag'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            dist/BeatBox-windows.exe \
+            dist/BeatBox-windows.zip \
+            dist/BeatBox.apk \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "BeatBox $VERSION" \
+            --notes-file release-notes.txt

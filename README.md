@@ -52,7 +52,7 @@ indirme bağlantıları her yeni sürümde geçerli kalır.
 - Fotoğraf ızgarası ve tam ekran görüntüleyici (tekerlekle yakınlaştırma, önceki/sonraki)
 - Video oynatıcı: FFmpeg ile çözme, ses, ilerleme çubuğu, telefonla çekilen dikey videolarda doğru döndürme
 - Ayarlar: görünüm, ekolayzer, ses seviyesi, uyku zamanlayıcı, kitaplık klasörü, dil, hakkında
-- **Güncelleme denetimi:** Hakkında bölümünden `update.json` okunur; yeni sürüm varsa sabit adlı kurulum dosyası tarayıcıda açılır
+- **Güncelleme denetimi:** Hakkında bölümünden ya da açılışta günde bir kez `update.json` okunur; yeni sürüm varsa sürüm notları gösterilir, kurulum paketi uygulama içinde indirilip kurulur
 
 ## Desteklenen biçimler
 
@@ -114,10 +114,24 @@ export JAVA_HOME="$LOCALAPPDATA/BeatBox/jdk21/jdk-21.0.13.1+2"   # örnek yol
 
 ## Sürümleme
 
-Sürüm bilgisi `app/build.gradle.kts` (`versionCode`, `versionName`) ve
-`desktop/build.gradle.kts` (`packageVersion`) içinde tutulur; masaüstü tarafında
-`DesktopUpdateChecker` içindeki `VERSION_CODE` da aynı değere güncellenir.
-Her iki platformun güncelleme denetimi `update.json` dosyasını okur.
+Sürümün tek kaynağı [`version.properties`](version.properties) dosyasıdır:
+`version.code` (Android `versionCode`, masaüstü karşılaştırma kodu) ve
+`version.name` (görünen sürüm). Bu değerler `app` ve `desktop` derleme
+betiklerine, masaüstünde üretilen `BeatBoxVersion` sabitlerine ve `update.json`
+içeriğine buradan aktarılır.
+
+Yeni sürüm çıkarma adımları:
+
+1. `version.properties` içindeki `version.code`/`version.name` değerlerini artır.
+2. `release-notes.txt` dosyasına sürüm notlarını yaz.
+3. `./gradlew generateUpdateManifest` ile `update.json` dosyasını yeniden üret.
+4. Tek bir commit hazırla ve `v<version.name>` etiketiyle it.
+
+`.github/workflows/release.yml` etiket itildiğinde sürümün etiketle uyumunu ve
+`update.json` tazeliğini doğrular, Windows kurulum paketini, taşınabilir ZIP'i ve
+APK'yı derleyip sabit adlarla (`BeatBox-windows.exe`, `BeatBox-windows.zip`,
+`BeatBox.apk`) GitHub Release'e yükler. Her iki platformun güncelleme denetimi
+`update.json` dosyasını okur.
 
 ## Lisans
 

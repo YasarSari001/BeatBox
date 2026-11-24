@@ -90,6 +90,7 @@ import androidx.compose.ui.window.rememberWindowState
 import com.blackstack.beatbox.AppLanguage
 import com.blackstack.beatbox.EQPreset
 import com.blackstack.beatbox.Strings
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -153,6 +154,9 @@ private fun pickTrack(
     if (repeat == RepeatMode.ALL || !automatic) return list.lastOrNull()
     return list.firstOrNull()
 }
+
+/** Açılışta sessiz güncelleme denetiminin aralığı: günde bir kez. */
+private const val UPDATE_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000L
 
 fun main() = application {
     val prefs = remember { Preferences.userRoot().node("com/blackstack/beatbox/desktop") }
@@ -240,6 +244,7 @@ fun main() = application {
                     closeToTray = enabled
                     prefs.putBoolean("close_to_tray", enabled)
                 },
+                onExit = { quit() },
             )
         }
     }
@@ -254,6 +259,7 @@ private fun BeatBoxDesktop(
     trayController: TrayController,
     closeToTray: Boolean,
     onCloseToTrayChange: (Boolean) -> Unit,
+    onExit: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val videoEngine = remember { VideoEngine() }
@@ -437,6 +443,34 @@ private fun BeatBoxDesktop(
         }
         trayController.onNext = { step(1) }
         trayController.onPrevious = { step(-1) }
+        trayController.updateAvailable = updateState is UpdateUiState.Available
+    }
+
+    /*
+     * Açılışta sessiz denetim: en fazla günde bir kez, kullanıcıyı bekletmeden.
+     * Sonuç Hakkında satırında ve tepsi menüsünde görünür; ağ hatası sessizce
+     * yutulur (elle denetimde hata mesajı gösterilmeye devam eder).
+     */
+    LaunchedEffect(Unit) {
+        val now = System.currentTimeMillis()
+        val last = prefs.getLong("update_last_check", 0L)
+        if (now - last < UPDATE_CHECK_INTERVAL_MS) return@LaunchedEffect
+        // Önceki oturumlardan kalan yarım indirmeler açılışta silinir.
+        withContext(Dispatchers.IO) { DesktopUpdateChecker.cleanupTempInstallers() }
+        updateState = UpdateUiState.Checking
+        val result = DesktopUpdateChecker.check()
+        updateState = when (result) {
+            is DesktopUpdateChecker.Result.Available -> UpdateUiState.Available(result.update)
+            DesktopUpdateChecker.Result.UpToDate -> UpdateUiState.UpToDate
+            DesktopUpdateChecker.Result.Failed -> UpdateUiState.Idle
+        }
+        /*
+         * Zaman damgası yalnızca sonuç alınan denetimden sonra yazılır; ağ
+         * hatasında bir sonraki açılışta yeniden denenir.
+         */
+        if (result != DesktopUpdateChecker.Result.Failed) {
+            prefs.putLong("update_last_check", System.currentTimeMillis())
+        }
     }
 
     val visibleNow by rememberUpdatedState(visible)
@@ -740,11 +774,39 @@ private fun BeatBoxDesktop(
                                 }
                             },
                             onDownloadUpdate = {
-                                // Sabit asset adı sayesinde bağlantı her sürümde geçerli.
-                                runCatching {
-                                    Desktop.getDesktop()
-                                        .browse(URI.create(DesktopUpdateChecker.DOWNLOAD_URL))
-                                }.onFailure { error = DesktopUpdateChecker.DOWNLOAD_URL }
+                                val available = (updateState as? UpdateUiState.Available)?.update
+                                if (available != null) {
+                                    updateState = UpdateUiState.Downloading(available, 0f)
+                                    scope.launch {
+                                        try {
+                                            // İlerleme arka planda hesaplanır, ekran ana iş parçacığında güncellenir.
+                                            val installer = DesktopUpdateChecker.downloadInstaller { progress ->
+                                                withContext(Dispatchers.Main) {
+                                                    updateState = UpdateUiState.Downloading(available, progress)
+                                                }
+                                            }
+                                            updateState = UpdateUiState.ReadyToInstall(installer)
+                                        } catch (e: CancellationException) {
+                                            throw e
+                                        } catch (e: Exception) {
+                                            updateState = UpdateUiState.Failed
+                                        }
+                                    }
+                                }
+                            },
+                            onInstallUpdate = {
+                                val installer = (updateState as? UpdateUiState.ReadyToInstall)?.installer
+                                if (installer != null) {
+                                    updateState = UpdateUiState.Idle
+                                    // Kurulum uygulama kapandıktan sonra başlar; önce dosyalar serbest bırakılır.
+                                    if (DesktopUpdateChecker.installAfterExit(installer)) {
+                                        onExit()
+                                    } else {
+                                        // Başlatılamayan indirme boşuna yer kaplamasın.
+                                        installer.delete()
+                                        updateState = UpdateUiState.Failed
+                                    }
+                                }
                             },
                         )
                     }

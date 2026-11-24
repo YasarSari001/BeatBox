@@ -27,8 +27,9 @@ android {
         applicationId = "com.blackstack.beatbox"
         minSdk = 26
         targetSdk = 36
-        versionCode = 15
-        versionName = "3.9.3"
+        // Sürüm tek kaynaktan gelir: version.properties.
+        versionCode = rootProject.extra["beatboxVersionCode"] as Int
+        versionName = rootProject.extra["beatboxVersionName"] as String
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

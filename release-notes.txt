@@ -1,0 +1,5 @@
+BeatBox 3.9.3
+• Windows sürümü artık yeni sürümleri update.json üzerinden denetliyor
+• Denetim sonucu Hakkında ekranında görünüyor; yeni sürüm varsa sürüm notları ve tek tıkla indirme bağlantısı gösteriliyor
+• İndirme bağlantısı sabit dosya adı kullandığı için her sürümde geçerli kalıyor
+• Android tarafındaki davranış değişmedi

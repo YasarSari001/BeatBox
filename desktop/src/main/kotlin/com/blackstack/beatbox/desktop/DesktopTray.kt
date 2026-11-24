@@ -28,6 +28,8 @@ class TrayController {
     var strings by mutableStateOf(Strings(AppLanguage.TR))
     var isPlaying by mutableStateOf(false)
     var title by mutableStateOf<String?>(null)
+    /** Sessiz denetim yeni bir sürüm bulduysa menüde kısa bir satır görünür. */
+    var updateAvailable by mutableStateOf(false)
     /** Metin alanı veya pencere açıkken düz klavye kısayollarını engeller. */
     var shortcutsBlocked by mutableStateOf(false)
     var onTogglePlay: () -> Unit = {}
@@ -61,6 +63,9 @@ fun ApplicationScope.BeatBoxTray(
         tooltip = tooltip,
         menu = {
             Item(strings.dt("tray_show"), onClick = onShow)
+            if (controller.updateAvailable) {
+                Item(strings.get("update_available"), onClick = onShow)
+            }
             Separator()
             Item(
                 text = strings.get(if (controller.isPlaying) "pause" else "play"),

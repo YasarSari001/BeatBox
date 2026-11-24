@@ -1,7 +1,12 @@
 package com.blackstack.beatbox.desktop
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URI
 import java.util.Base64
@@ -24,12 +29,11 @@ data class DesktopUpdate(
 
 object DesktopUpdateChecker {
     /**
-     * Uygulamanın kendi sürümü. Yeni sürüm yayınlarken
-     * `desktop/build.gradle.kts` içindeki `packageVersion` ile birlikte
-     * güncellenmelidir; Android `versionCode` değeriyle aynı tutulur.
+     * Uygulamanın kendi sürümü. Değerler elle tutulmaz: build sırasında
+     * `version.properties` dosyasından üretilen `BeatBoxVersion`'dan gelir.
      */
-    const val VERSION_CODE = 15
-    const val VERSION_NAME = "3.9.3"
+    const val VERSION_CODE = BeatBoxVersion.CODE
+    const val VERSION_NAME = BeatBoxVersion.NAME
 
     /**
      * Sabit asset adı: her yeni sürümde aynı dosya adı yüklendiği için bu
@@ -51,6 +55,10 @@ object DesktopUpdateChecker {
 
     private const val USER_AGENT = "BeatBox-Desktop"
 
+    /** Geçici kurulum dosyalarının ad kalıbı (temizlik için ortak tutulur). */
+    private const val INSTALLER_PREFIX = "BeatBox-update-"
+    private const val INSTALLER_SUFFIX = ".exe"
+
     /** Denetimin sonucu; Hakkında ekranında gösterilir. */
     sealed interface Result {
         data class Available(val update: DesktopUpdate) : Result
@@ -67,6 +75,106 @@ object DesktopUpdateChecker {
 
     /** Yayındaki sürüm bu uygulamadan yeni mi? */
     fun isNewer(update: DesktopUpdate): Boolean = update.versionCode > VERSION_CODE
+
+    /**
+     * Kurulum paketini indirir ve geçici dosyayı döner.
+     *
+     * `onProgress` 0..1 arasında ilerleme bildirir; iptal edilirse yarım kalan
+     * dosya silinir.
+     */
+    suspend fun downloadInstaller(onProgress: suspend (Float) -> Unit): File =
+        withContext(Dispatchers.IO) {
+            val target = File.createTempFile(INSTALLER_PREFIX, INSTALLER_SUFFIX)
+            var connection: HttpURLConnection? = null
+            try {
+                connection = (URI.create(DOWNLOAD_URL).toURL().openConnection() as HttpURLConnection)
+                    .apply {
+                        connectTimeout = 15_000
+                        readTimeout = 30_000
+                        instanceFollowRedirects = true
+                        setRequestProperty("User-Agent", USER_AGENT)
+                        setRequestProperty("Accept", "application/octet-stream")
+                        setRequestProperty("Cache-Control", "no-cache")
+                    }
+                if (connection.responseCode !in 200..299) {
+                    throw IOException("HTTP ${connection.responseCode}")
+                }
+                val total = connection.contentLengthLong
+                connection.inputStream.use { input ->
+                    FileOutputStream(target).use { output ->
+                        val buffer = ByteArray(64 * 1024)
+                        var written = 0L
+                        while (true) {
+                            currentCoroutineContext().ensureActive()
+                            val read = input.read(buffer)
+                            if (read <= 0) break
+                            output.write(buffer, 0, read)
+                            written += read
+                            if (total > 0) {
+                                onProgress((written.toDouble() / total).toFloat().coerceIn(0f, 1f))
+                            }
+                        }
+                    }
+                }
+                target
+            } catch (e: Throwable) {
+                target.delete()
+                throw e
+            } finally {
+                connection?.disconnect()
+            }
+        }
+
+    /**
+     * İndirilen kurulum paketini uygulama kapandıktan sonra başlatır.
+     *
+     * Kurulum dosyaları çalışan uygulama tarafından kilitli olduğu için
+     * sabit bir gecikme yerine bu sürecin gerçekten bitmesi beklenir: Windows'ta
+     * `Wait-Process`, diğer platformlarda `kill -0` yoklaması. Bekleme ayrı bir
+     * yardımcı süreçte yapıldığı için çağıran taraf hemen uygulamayı kapatabilir.
+     */
+    fun installAfterExit(installer: File): Boolean = runCatching {
+        val pid = ProcessHandle.current().pid()
+        val path = installer.absolutePath
+        val helper = if (isWindows()) {
+            val quoted = path.replace("'", "''")
+            listOf(
+                "powershell.exe",
+                "-NoProfile",
+                "-NonInteractive",
+                "-WindowStyle",
+                "Hidden",
+                "-Command",
+                "Wait-Process -Id $pid -ErrorAction SilentlyContinue; " +
+                    "Start-Process -FilePath '$quoted'",
+            )
+        } else {
+            listOf(
+                "sh",
+                "-c",
+                "while kill -0 $pid 2>/dev/null; do sleep 1; done; \"$path\" &",
+            )
+        }
+        ProcessBuilder(helper).start()
+        true
+    }.getOrDefault(false)
+
+    /**
+     * Önceki oturumlardan kalan geçici kurulum dosyalarını siler.
+     *
+     * Kurulum başlatıldıktan sonra dosya yerinde kalır (kurulum sihirbazı
+     * onu çalıştırır), bu yüzden gerçek temizlik bir sonraki açılışta yapılır.
+     */
+    fun cleanupTempInstallers(): Int {
+        val dir = File(System.getProperty("java.io.tmpdir")) ?: return 0
+        val stale = dir.listFiles { file ->
+            file.isFile && file.name.startsWith(INSTALLER_PREFIX) && file.name.endsWith(INSTALLER_SUFFIX)
+        } ?: return 0
+        return stale.count { it.delete() }
+    }
+
+    private fun isWindows(): Boolean =
+        System.getProperty("os.name").orEmpty().lowercase().contains("win")
 
     /** JSON gövdesini ayrıştırır; zorunlu alanlar yoksa `null` döner. */
     fun parseManifest(body: String): DesktopUpdate? {

@@ -13,6 +13,10 @@ plugins {
     alias(libs.plugins.compose.multiplatform)
 }
 
+// Sürüm tek kaynaktan (version.properties) gelir.
+val beatboxVersionCode = rootProject.extra["beatboxVersionCode"] as Int
+val beatboxVersionName = rootProject.extra["beatboxVersionName"] as String
+
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
@@ -23,6 +27,48 @@ java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
 }
+
+/*
+ * Güncelleme denetleyicisinin karşılaştırma yaptığı sürüm sabitleri elle
+ * tutulmaz: build sırasında version.properties'ten üretilir. Böylece sürüm
+ * artırmak tek dosyada kalır.
+ */
+val generatedVersionDir = layout.buildDirectory.dir("generated/version")
+val generateVersionSource by tasks.registering {
+    val outputDir = generatedVersionDir
+    val code = beatboxVersionCode
+    val name = beatboxVersionName
+    inputs.property("versionCode", code)
+    inputs.property("versionName", name)
+    outputs.dir(outputDir)
+
+    doLast {
+        val file = outputDir.get()
+            .file("com/blackstack/beatbox/desktop/BeatBoxVersion.kt")
+            .asFile
+        file.parentFile.mkdirs()
+        file.writeText(
+            """
+            |package com.blackstack.beatbox.desktop
+            |
+            |/**
+            | * Uygulamanın sürümü.
+            | *
+            | * `version.properties` dosyasından build sırasında üretilir; bu dosyayı
+            | * elle düzenlemeyin, sürümü version.properties içinde artırın.
+            | */
+            |object BeatBoxVersion {
+            |    const val CODE = $code
+            |    const val NAME = "$name"
+            |}
+            |
+            """.trimMargin(),
+            Charsets.UTF_8,
+        )
+    }
+}
+
+kotlin.sourceSets.getByName("main").kotlin.srcDir(generateVersionSource)
 
 dependencies {
     implementation(project(":core"))
@@ -57,7 +103,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Exe)
             packageName = "BeatBox"
-            packageVersion = "3.9.3"
+            packageVersion = beatboxVersionName
             // WiX, kurulum paketinde ASCII dışı karakter kabul etmiyor (LGHT0311).
             description = "BeatBox music player for Windows"
             vendor = "BlackStack"

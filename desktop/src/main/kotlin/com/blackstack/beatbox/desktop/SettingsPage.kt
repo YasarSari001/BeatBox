@@ -56,6 +56,12 @@ sealed interface UpdateUiState {
     data object UpToDate : UpdateUiState
     data object Failed : UpdateUiState
     data class Available(val update: DesktopUpdate) : UpdateUiState
+
+    /** Kurulum paketi indiriliyor; [progress] 0..1 arası. */
+    data class Downloading(val update: DesktopUpdate, val progress: Float) : UpdateUiState
+
+    /** Paket indirildi; kurulum için uygulama yeniden başlatılacak. */
+    data class ReadyToInstall(val installer: File) : UpdateUiState
 }
 
 /**
@@ -94,6 +100,7 @@ fun SettingsPage(
     updateState: UpdateUiState,
     onCheckUpdate: () -> Unit,
     onDownloadUpdate: () -> Unit,
+    onInstallUpdate: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -313,28 +320,44 @@ fun SettingsPage(
                     UpdateUiState.Failed -> strings.get("update_check_failed")
                     is UpdateUiState.Available ->
                         "${strings.get("update_version")}: ${state.update.versionName}"
+                    is UpdateUiState.Downloading ->
+                        "${strings.get("update_downloading")} ${(state.progress * 100).toInt()}%"
+                    is UpdateUiState.ReadyToInstall -> strings.get("update_ready")
                 },
             ) {
-                if (updateState is UpdateUiState.Available) {
-                    Chip(
+                when (val state = updateState) {
+                    is UpdateUiState.Available -> Chip(
                         text = strings.get("update_download"),
                         selected = true,
                         onClick = onDownloadUpdate,
                     )
-                } else {
-                    val checking = updateState is UpdateUiState.Checking
-                    Chip(
-                        text = if (checking) "…" else strings.get("update_check"),
+                    is UpdateUiState.Downloading -> Chip(
+                        text = "${(state.progress * 100).toInt()}%",
                         selected = false,
-                        onClick = { if (!checking) onCheckUpdate() },
+                        onClick = {},
+                    )
+                    is UpdateUiState.ReadyToInstall -> Chip(
+                        text = strings.get("update_install"),
+                        selected = true,
+                        onClick = onInstallUpdate,
+                    )
+                    UpdateUiState.Checking -> Chip(text = "…", selected = false, onClick = {})
+                    else -> Chip(
+                        text = strings.get("update_check"),
+                        selected = false,
+                        onClick = onCheckUpdate,
                     )
                 }
             }
-            val available = updateState as? UpdateUiState.Available
-            if (available != null && available.update.changelog.isNotBlank()) {
+            val pending = when (val state = updateState) {
+                is UpdateUiState.Available -> state.update
+                is UpdateUiState.Downloading -> state.update
+                else -> null
+            }
+            if (pending != null && pending.changelog.isNotBlank()) {
                 SettingsDivider()
                 Text(
-                    text = available.update.changelog,
+                    text = pending.changelog,
                     fontSize = 11.5.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 48.dp, end = 8.dp, top = 2.dp, bottom = 12.dp),
