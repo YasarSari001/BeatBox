@@ -55,7 +55,15 @@ tasks.register("generateUpdateManifest") {
     outputs.file(manifestFile)
 
     doLast {
-        val notes = notesFile.asFile.readText(Charsets.UTF_8).trim()
+        /*
+         * Satır sonları normalleştirilir: Windows'ta dosya CRLF olarak
+         * çekilebildii için üretilen JSON'un içeriği checkout ayarına bağlı
+         * kalmamalı, aksi halde CI tazelik denetimi boşuna düşer.
+         */
+        val notes = notesFile.asFile.readText(Charsets.UTF_8)
+            .replace("\r\n", "\n")
+            .replace('\r', '\n')
+            .trim()
         manifestFile.asFile.writeText(
             """
             |{

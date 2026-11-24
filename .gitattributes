@@ -1,0 +1,5 @@
+# Sürüm ve yayın dosyaları üretilen içerikle birebir karşılaştırıldığı için
+# (CI'da `git diff --exit-code update.json`) satır sonları sabit tutulur.
+update.json text eol=lf
+release-notes.txt text eol=lf
+version.properties text eol=lf
