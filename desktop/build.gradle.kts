@@ -57,7 +57,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Exe)
             packageName = "BeatBox"
-            packageVersion = "3.9.1"
+            packageVersion = "3.9.2"
             // WiX, kurulum paketinde ASCII dışı karakter kabul etmiyor (LGHT0311).
             description = "BeatBox music player for Windows"
             vendor = "BlackStack"

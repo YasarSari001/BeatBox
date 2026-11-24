@@ -15,10 +15,12 @@ Tüm dosyalar [son sürüm sayfasında](https://github.com/YasarSari001/BeatBox/
 | Platform | Dosya | Açıklama |
 |---|---|---|
 | Android 8.0+ | [`BeatBox.apk`](https://github.com/YasarSari001/BeatBox/releases/latest/download/BeatBox.apk) | Telefon/tablet sürümü |
-| Windows 10/11 (x64) | [`BeatBox-3.9.1.exe`](https://github.com/YasarSari001/BeatBox/releases/latest/download/BeatBox-3.9.1.exe) | Kurulum paketi (WiX) |
-| Windows 10/11 (x64) | [`BeatBox-3.9.1-windows.zip`](https://github.com/YasarSari001/BeatBox/releases/latest/download/BeatBox-3.9.1-windows.zip) | Kurulum gerektirmeyen taşınabilir sürüm |
+| Windows 10/11 (x64) | [`BeatBox-windows.exe`](https://github.com/YasarSari001/BeatBox/releases/latest/download/BeatBox-windows.exe) | Kurulum paketi (WiX) |
+| Windows 10/11 (x64) | [`BeatBox-windows.zip`](https://github.com/YasarSari001/BeatBox/releases/latest/download/BeatBox-windows.zip) | Kurulum gerektirmeyen taşınabilir sürüm |
 
 Windows paketleri gömülü Java çalışma zamanı içerir; ayrıca JDK kurmanız gerekmez.
+Yayın dosyalarının adları sürüm numarası içermez; bu sabit adlar sayesinde
+indirme bağlantıları her yeni sürümde geçerli kalır.
 
 ## Özellikler
 
@@ -95,7 +97,8 @@ export JAVA_HOME="$LOCALAPPDATA/BeatBox/jdk21/jdk-21.0.13.1+2"   # örnek yol
 
 Çıktılar:
 
-- Kurulum paketi: `desktop/build/compose/binaries/main/exe/BeatBox-3.9.1.exe`
+- Kurulum paketi: `desktop/build/compose/binaries/main/exe/BeatBox-3.9.2.exe`
+  (yayına `BeatBox-windows.exe` adıyla yüklenir)
 - Taşınabilir sürüm: `desktop/build/compose/binaries/main/app/BeatBox/`
 
 ## Proje yapısı
