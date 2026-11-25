@@ -1,5 +1,8 @@
 package com.blackstack.beatbox.desktop
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -25,11 +28,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -54,12 +63,32 @@ fun MiniPlayer(
     onShowPanel: () -> Unit,
 ) {
     val accent = MaterialTheme.colorScheme.primary
+
+    // Çubuk ilk göründüğünde alttan yükselerek belirir; ilerleme de
+    // sıçramadan, yumuşak bir geçişle ilerler.
+    var appeared by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { appeared = true }
+    val appearProgress by animateFloatAsState(
+        targetValue = if (appeared) 1f else 0f,
+        animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
+        label = "mini_player_appear",
+    )
+    val progressFraction by animateFloatAsState(
+        targetValue = if (duration > 0.0) (position / duration).toFloat().coerceIn(0f, 1f) else 0f,
+        animationSpec = tween(durationMillis = 320),
+        label = "mini_player_progress",
+    )
+
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         modifier = Modifier
             .fillMaxWidth()
             .height(68.dp)
+            .graphicsLayer {
+                alpha = appearProgress
+                translationY = (1f - appearProgress) * 18.dp.toPx()
+            }
             .clickable { onShowPanel() },
     ) {
         Box {
@@ -127,7 +156,7 @@ fun MiniPlayer(
             }
             if (duration > 0.0) {
                 LinearProgressIndicator(
-                    progress = { (position / duration).toFloat().coerceIn(0f, 1f) },
+                    progress = { progressFraction },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(2.dp)

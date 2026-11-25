@@ -14,16 +14,20 @@ import javax.imageio.ImageIO
  * önbelleğe alınır, böylece ızgara kaydırılırken tekrar tekrar disk okunmaz.
  */
 object AlbumArt {
-    private val cache = ConcurrentHashMap<String, ImageBitmap?>()
+    // ConcurrentHashMap null değer kabul etmediği için kapağı olmayan
+    // dosyalar ayrı bir kümede işaretlenir; böylece disk tekrar okunmaz.
+    private val cache = ConcurrentHashMap<String, ImageBitmap>()
+    private val missing = java.util.Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
 
     fun cover(track: Track): ImageBitmap? {
         val key = track.file.absolutePath
-        if (cache.containsKey(key)) return cache[key]
+        cache[key]?.let { return it }
+        if (key in missing) return null
         val bytes = runCatching {
             AudioFileIO.read(track.file).tag?.firstArtwork?.binaryData
         }.getOrNull()
         val bitmap = bytes?.let(::decode)
-        cache[key] = bitmap
+        if (bitmap == null) missing += key else cache[key] = bitmap
         return bitmap
     }
 

@@ -1,5 +1,15 @@
 package com.blackstack.beatbox.desktop
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -72,6 +82,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -655,7 +666,18 @@ private fun BeatBoxDesktop(
                 }
 
                 Box(Modifier.weight(1f).fillMaxWidth()) {
-                    when (page) {
+                    // Sayfa geçişi: yeni içerik hafifçe yukarıdan kayarak belirir.
+                    AnimatedContent(
+                        targetState = page,
+                        transitionSpec = {
+                            (fadeIn(tween(220, easing = FastOutSlowInEasing)) +
+                                slideInVertically { height -> height / 24 }) togetherWith
+                                (fadeOut(tween(140)) +
+                                    slideOutVertically { height -> -height / 24 })
+                        },
+                        label = "page_transition",
+                    ) { visiblePage ->
+                        when (visiblePage) {
                         Page.HOME -> HomePage(
                             strings = strings,
                             tracks = tracks,
@@ -847,32 +869,34 @@ private fun BeatBoxDesktop(
                             },
                         )
                     }
+                    }
+                }
 
-                    if (!nowPlayingVisible) {
-                        current?.takeIf { it.kind == MediaKind.AUDIO }?.let { active ->
-                            Spacer(Modifier.height(10.dp))
-                            MiniPlayer(
-                                strings = strings,
-                                track = active,
-                                isPlaying = isPlaying,
-                                position = position,
-                                duration = duration,
-                                onTogglePlay = {
-                                    if (isPlaying) {
-                                        engine.pause()
-                                        isPlaying = false
-                                    } else {
-                                        engine.resume()
-                                        isPlaying = true
-                                    }
-                                },
-                                onNext = { step(1) },
-                                onShowPanel = {
-                                    nowPlayingVisible = true
-                                    prefs.putBoolean("now_playing_visible", true)
-                                },
-                            )
-                        }
+                // Mini oynatıcı sayfa alanının altında, listenin hemen altında durur.
+                if (!nowPlayingVisible) {
+                    current?.takeIf { it.kind == MediaKind.AUDIO }?.let { active ->
+                        Spacer(Modifier.height(10.dp))
+                        MiniPlayer(
+                            strings = strings,
+                            track = active,
+                            isPlaying = isPlaying,
+                            position = position,
+                            duration = duration,
+                            onTogglePlay = {
+                                if (isPlaying) {
+                                    engine.pause()
+                                    isPlaying = false
+                                } else {
+                                    engine.resume()
+                                    isPlaying = true
+                                }
+                            },
+                            onNext = { step(1) },
+                            onShowPanel = {
+                                nowPlayingVisible = true
+                                prefs.putBoolean("now_playing_visible", true)
+                            },
+                        )
                     }
                 }
             }
@@ -1002,26 +1026,47 @@ private fun NavRail(
 @Composable
 private fun NavItem(label: String, icon: ImageVector, selected: Boolean, onClick: () -> Unit) {
     val accent = MaterialTheme.colorScheme.primary
+    // Seçim aniden değil, yumuşak renk ve ölçek geçişiyle belirir.
+    val background by animateColorAsState(
+        targetValue = if (selected) accent.copy(alpha = 0.18f) else Color.Transparent,
+        animationSpec = tween(180),
+        label = "nav_item_background",
+    )
+    val tint by animateColorAsState(
+        targetValue = if (selected) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = tween(180),
+        label = "nav_item_tint",
+    )
+    val iconScale by animateFloatAsState(
+        targetValue = if (selected) 1f else 0.92f,
+        animationSpec = tween(180, easing = FastOutSlowInEasing),
+        label = "nav_item_scale",
+    )
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier = Modifier
                 .size(48.dp)
                 .clip(RoundedCornerShape(16.dp))
-                .background(if (selected) accent.copy(alpha = 0.18f) else Color.Transparent)
+                .background(background)
                 .clickable { onClick() },
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                tint = if (selected) accent else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(23.dp),
+                tint = tint,
+                modifier = Modifier
+                    .size(23.dp)
+                    .graphicsLayer {
+                        scaleX = iconScale
+                        scaleY = iconScale
+                    },
             )
         }
         Text(
             text = label,
             fontSize = 10.5.sp,
-            color = if (selected) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+            color = tint,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
