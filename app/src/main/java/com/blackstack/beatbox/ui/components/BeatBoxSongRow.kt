@@ -61,6 +61,7 @@ import com.blackstack.beatbox.Strings
 import com.blackstack.beatbox.ui.components.formatTime
 import com.blackstack.beatbox.ui.theme.BeatBoxMotion
 import com.blackstack.beatbox.ui.theme.LocalReducedMotion
+import com.blackstack.beatbox.ui.theme.entranceAnimation
 
 /**
  * Kütüphane ve çalma listelerinde kullanılan ortak Aurora Glass şarkı satırı.
@@ -80,10 +81,14 @@ fun BeatBoxSongRow(
     isSelected: Boolean,
     selectionMode: Boolean,
     compact: Boolean,
+    /** Liste içindeki sıra; giriş hareketinin gecikmesini belirler. */
+    index: Int = 0,
     onFavClick: () -> Unit,
     onDelete: () -> Unit,
     onRowClick: () -> Unit,
-    onRowLongClick: () -> Unit
+    onRowLongClick: () -> Unit,
+    /** Liste yerleşimi animasyonları (ör. `Modifier.animateItem()`) buradan geçer. */
+    modifier: Modifier = Modifier
 ) {
     val primary = MaterialTheme.colorScheme.primary
     val secondary = MaterialTheme.colorScheme.secondary
@@ -115,6 +120,7 @@ fun BeatBoxSongRow(
 
     SwipeToDismissBox(
         state = dismissState,
+        modifier = modifier.entranceAnimation(index),
         enableDismissFromStartToEnd = !selectionMode,
         enableDismissFromEndToStart = !selectionMode,
         backgroundContent = {

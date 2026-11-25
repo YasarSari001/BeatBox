@@ -4,17 +4,19 @@ import com.blackstack.beatbox.*
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.SizeTransform
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.blackstack.beatbox.ui.theme.BeatBoxMotion
+import com.blackstack.beatbox.ui.theme.LocalReducedMotion
 
 import com.blackstack.beatbox.ui.home.HomeScreen
 import com.blackstack.beatbox.ui.library.LibraryScreen
@@ -54,21 +56,35 @@ fun BeatBoxTabContent(
     onRefresh: () -> Unit = {},
     isRefreshing: Boolean = false
 ) {
+    val reducedMotion = LocalReducedMotion.current
     AnimatedContent(
         targetState = selectedTab,
         modifier = Modifier.fillMaxSize(),
         transitionSpec = {
-            val direction = if (targetState > initialState) 1 else -1
-            val duration = 320
-            (slideInHorizontally(
-                initialOffsetX = { fullWidth -> fullWidth * direction },
-                animationSpec = tween(duration, easing = FastOutSlowInEasing)
-            ) + fadeIn(animationSpec = tween(duration / 2))) togetherWith
-                    (slideOutHorizontally(
-                        targetOffsetX = { fullWidth -> -fullWidth * direction },
-                        animationSpec = tween(duration, easing = FastOutSlowInEasing)
-                    ) + fadeOut(animationSpec = tween(duration / 2))) using
-                    SizeTransform(clip = false)
+            if (reducedMotion) {
+                fadeIn(tween(BeatBoxMotion.Instant)) togetherWith
+                    fadeOut(tween(BeatBoxMotion.Instant))
+            } else {
+                // Paylaşımlı eksen: eski sayfa hafifçe büyüyüp geri çekilirken
+                // yeni sayfa derinlikten öne gelir. Yatay sürükleme yerine
+                // "yer değiştirme" hissi veren, modern bir geçiş.
+                (fadeIn(tween(BeatBoxMotion.Standard, easing = BeatBoxMotion.ExpressiveEasing)) +
+                    scaleIn(
+                        initialScale = 0.94f,
+                        animationSpec = tween(360, easing = BeatBoxMotion.ExpressiveEasing)
+                    ) +
+                    slideInVertically(
+                        animationSpec = tween(360, easing = BeatBoxMotion.ExpressiveEasing)
+                    ) { height -> height / 24 }) togetherWith
+                    (fadeOut(tween(BeatBoxMotion.Quick)) +
+                        scaleOut(
+                            targetScale = 1.04f,
+                            animationSpec = tween(280, easing = BeatBoxMotion.StandardEasing)
+                        ) +
+                        slideOutVertically(
+                            animationSpec = tween(280, easing = BeatBoxMotion.StandardEasing)
+                        ) { height -> -height / 24 })
+            }
         },
         label = "tab_transition"
     ) { tab ->

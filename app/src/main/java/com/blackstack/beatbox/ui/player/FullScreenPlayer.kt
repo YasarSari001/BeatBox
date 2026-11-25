@@ -278,6 +278,7 @@ fun FullScreenPlayer(
                 .padding(horizontal = 20.dp)
         ) {
             PlayerTopBar(
+                modifier = Modifier.chromeEntrance(0),
                 strings = strings,
                 onCollapse = closePlayer,
                 onOpenEQ = onOpenEQ,
@@ -422,10 +423,12 @@ fun FullScreenPlayer(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(38.dp)
+                    .chromeEntrance(1)
             )
             Spacer(Modifier.height(4.dp))
 
             PlayerTrackInfo(
+                modifier = Modifier.chromeEntrance(2),
                 audio = a,
                 isFav = isFav,
                 strings = strings,
@@ -439,6 +442,7 @@ fun FullScreenPlayer(
             // güncellemeleri oynatıcının tamamını değil, yalnızca bu satırı
             // yeniden compose eder.
             PlayerSeekSection(
+                modifier = Modifier.chromeEntrance(3),
                 positionProvider = { pos },
                 durationMs = a.duration,
                 audioKey = a.id,
@@ -458,6 +462,7 @@ fun FullScreenPlayer(
             Spacer(Modifier.height(8.dp))
 
             PlayerPrimaryControls(
+                modifier = Modifier.chromeEntrance(4),
                 isPlaying = isPlaying,
                 strings = strings,
                 onPrev = onPrev,
@@ -485,6 +490,7 @@ fun FullScreenPlayer(
             }
 
             PlayerConnectedBar(
+                modifier = Modifier.chromeEntrance(5),
                 isShuffle = isShuffle,
                 repeatMode = repeatMode,
                 isLyricsActive = showLyrics,
@@ -677,42 +683,75 @@ private fun PlayerSeekSection(
     contentDescription: String,
     onScrubStart: () -> Unit,
     onScrub: (Float) -> Unit,
-    onScrubFinished: (Float) -> Unit
+    onScrubFinished: (Float) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val pos = positionProvider()
     val trackDuration = trackDurationOf(durationMs)
-    WaveformSeekBar(
-        progress = (pos / trackDuration).coerceIn(0f, 1f),
-        durationMs = durationMs,
-        audioKey = audioKey,
-        isPlaying = isPlaying,
-        visualizerState = visualizerState,
-        contentDescription = contentDescription,
-        onScrub = { fraction ->
-            onScrubStart()
-            onScrub(fraction)
-        },
-        onScrubFinished = onScrubFinished,
-        modifier = Modifier.fillMaxWidth()
+    Column(modifier.fillMaxWidth()) {
+        WaveformSeekBar(
+            progress = (pos / trackDuration).coerceIn(0f, 1f),
+            durationMs = durationMs,
+            audioKey = audioKey,
+            isPlaying = isPlaying,
+            visualizerState = visualizerState,
+            contentDescription = contentDescription,
+            onScrub = { fraction ->
+                onScrubStart()
+                onScrub(fraction)
+            },
+            onScrubFinished = onScrubFinished,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = formatTime(pos.toLong()),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color.White.copy(alpha = 0.72f)
+            )
+            Text(
+                text = formatTime(durationMs),
+                fontSize = 11.sp,
+                color = Color.White.copy(alpha = 0.55f)
+            )
+        }
+    }
+}
+
+/**
+ * Oynatıcı açılırken çevre birimlerin sırayla belirmesi için kademeli giriş.
+ *
+ * [index] her grubun gecikmesini belirler: üst çubuk önce iner, ardından
+ * görselleştirici, şarkı bilgisi, ilerleme ve kontroller alttan yükselir.
+ * Kapak kendi hero morph animasyonunu kullandığı için burada animasyonlanmaz.
+ * Sistemde hareket kapalıysa öğe doğrudan görünür.
+ */
+@Composable
+private fun Modifier.chromeEntrance(index: Int, distance: Dp = 16.dp): Modifier {
+    if (LocalReducedMotion.current) return this
+    var started by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(60L + index * 38L)
+        started = true
+    }
+    val progress by animateFloatAsState(
+        targetValue = if (started) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = BeatBoxMotion.Standard,
+            easing = BeatBoxMotion.ExpressiveEasing
+        ),
+        label = "player_chrome_$index"
     )
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = formatTime(pos.toLong()),
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Medium,
-            color = Color.White.copy(alpha = 0.72f)
-        )
-        Text(
-            text = formatTime(durationMs),
-            fontSize = 11.sp,
-            color = Color.White.copy(alpha = 0.55f)
-        )
+    return graphicsLayer {
+        alpha = progress
+        translationY = (1f - progress) * distance.toPx()
     }
 }
 

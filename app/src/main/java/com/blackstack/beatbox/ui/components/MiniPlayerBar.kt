@@ -65,6 +65,7 @@ import com.blackstack.beatbox.AudioFile
 import com.blackstack.beatbox.ui.components.ExplicitBadge
 import com.blackstack.beatbox.Strings
 import com.blackstack.beatbox.ui.theme.BeatBoxMotion
+import com.blackstack.beatbox.ui.theme.LocalReducedMotion
 import com.blackstack.beatbox.ui.theme.rememberPerformanceMode
 import kotlinx.coroutines.delay
 import kotlin.math.abs
@@ -130,10 +131,28 @@ fun MiniPlayerBar(
     val secondary = MaterialTheme.colorScheme.secondary
     val enabled = audio != null
 
+    // Mini oynatıcı göründüğünde alttan yumuşakça yükselir; tam ekran
+    // oynatıcıdan dönüşte de aynı karşılama tekrarlanır.
+    val reducedMotion = LocalReducedMotion.current
+    var appeared by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { appeared = true }
+    val appearProgress by animateFloatAsState(
+        targetValue = if (appeared || reducedMotion) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = BeatBoxMotion.Standard,
+            easing = BeatBoxMotion.ExpressiveEasing
+        ),
+        label = "mini_player_appear"
+    )
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 14.dp, vertical = 6.dp)
+            .graphicsLayer {
+                alpha = appearProgress
+                translationY = (1f - appearProgress) * 22.dp.toPx()
+            }
             .shadow(16.dp, RoundedCornerShape(26.dp))
             .clip(RoundedCornerShape(26.dp))
             .pointerInput(audio?.id) {

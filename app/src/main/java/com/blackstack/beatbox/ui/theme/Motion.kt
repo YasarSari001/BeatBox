@@ -2,15 +2,26 @@ package com.blackstack.beatbox.ui.theme
 
 import android.provider.Settings
 import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 
 /**
  * Sistem "animasyonları kaldır" ayarı. `true` iken sonsuz animasyonlar ve
@@ -77,6 +88,15 @@ object BeatBoxMotion {
         stiffness = 500f
     )
 
+    /**
+     * Kayan göstergeler (gezinme pill'i, seçim çerçevesi) için hafif taşmalı
+     * yay. Hedefe hızla varır, birkaç piksel taşıp yerine oturur.
+     */
+    val Glide = spring<Float>(
+        dampingRatio = 0.62f,
+        stiffness = 420f
+    )
+
     val StandardEasing = FastOutSlowInEasing
 
     /** Hızlı başlayıp yumuşak biten, "premium" hissi veren eğri. */
@@ -90,4 +110,38 @@ object BeatBoxMotion {
 
     fun slideSpec(durationMillis: Int = Standard): FiniteAnimationSpec<IntOffset> =
         tween(durationMillis = durationMillis, easing = StandardEasing)
+}
+
+/**
+ * Liste, kart ve içerik öğeleri için yumuşak giriş hareketi.
+ *
+ * Öğe ilk kez göründüğünde hafifçe yukarı kayarak belirir. [index] sıralı
+ * gecikme verir; böylece liste bir anda değil dalga hâlinde açılır. Gecikme
+ * sekiz öğede sınırlanır, uzun listelerde kaydırma yavaşlamaz. Kaydırıp geri
+ * dönüldüğünde hareket yeniden oynamaz. Sistemde hareket kapalıysa atlanır.
+ */
+@Composable
+fun Modifier.entranceAnimation(
+    index: Int = 0,
+    distance: Dp = 14.dp
+): Modifier {
+    if (LocalReducedMotion.current) return this
+    var started by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        val steps = index.coerceIn(0, 8)
+        if (steps > 0) delay(steps * BeatBoxMotion.Stagger.toLong())
+        started = true
+    }
+    val progress by animateFloatAsState(
+        targetValue = if (started) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = BeatBoxMotion.Standard,
+            easing = BeatBoxMotion.ExpressiveEasing
+        ),
+        label = "entrance_progress"
+    )
+    return graphicsLayer {
+        alpha = progress
+        translationY = (1f - progress) * distance.toPx()
+    }
 }

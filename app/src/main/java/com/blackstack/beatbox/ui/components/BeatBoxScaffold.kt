@@ -55,6 +55,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -463,7 +465,13 @@ fun BeatBoxScaffold(
         }
     },
         floatingActionButton = {
-            if (showFab) {
+            AnimatedVisibility(
+                visible = showFab,
+                enter = scaleIn(initialScale = 0.7f, animationSpec = BeatBoxMotion.Snappy) +
+                    fadeIn(animationSpec = BeatBoxMotion.expressive()),
+                exit = scaleOut(targetScale = 0.7f, animationSpec = BeatBoxMotion.Snappy) +
+                    fadeOut(animationSpec = BeatBoxMotion.Snappy)
+            ) {
                 FloatingActionButton(
                     onClick = onCreatePlaylist,
                     containerColor = MaterialTheme.colorScheme.primary,

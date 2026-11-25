@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -136,7 +137,7 @@ fun PlaylistDetailScreen(
                         PlaylistDetailEmpty(strings)
                     }
                 } else {
-                    items(songs, key = { it.id }) { song ->
+                    itemsIndexed(songs, key = { _, song -> song.id }) { index, song ->
                         BeatBoxSongRow(
                             audio = song,
                             strings = strings,
@@ -146,6 +147,7 @@ fun PlaylistDetailScreen(
                             isSelected = false,
                             selectionMode = false,
                             compact = false,
+                            index = index,
                             onFavClick = { onFavClick(song) },
                             onDelete = { onDelete(song) },
                             onRowClick = { onSongClick(song, songs) },

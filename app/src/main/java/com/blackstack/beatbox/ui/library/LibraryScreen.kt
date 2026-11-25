@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -31,6 +32,7 @@ import com.blackstack.beatbox.ui.components.BeatBoxSongRow
 import com.blackstack.beatbox.ui.library.sortedByLibraryKey
 import com.blackstack.beatbox.ui.components.EmptyArtKind
 import com.blackstack.beatbox.ui.components.PullToRefresh
+import com.blackstack.beatbox.ui.theme.LocalReducedMotion
 import kotlinx.coroutines.launch
 
 /**
@@ -86,6 +88,10 @@ fun LibraryScreen(
     var filter by rememberSaveable { mutableStateOf(LibraryFilter.ALL) }
     var compact by rememberSaveable { mutableStateOf(false) }
     var selection by remember { mutableStateOf<Set<Long>>(emptySet()) }
+
+    // Satır yer değiştirmesi ve ekleme/çıkma geçişleri sistem hareketi
+    // kapalıyken oynamaz; liste anında güncellenir.
+    val reducedMotion = LocalReducedMotion.current
 
     val search = searchQuery.trim()
     val searched = remember(allAudioList, search) {
@@ -297,9 +303,11 @@ fun LibraryScreen(
                                 item(key = "letter-$letter") {
                                     LibraryLetterHeader(letter)
                                 }
-                                items(songs, key = { "song-${it.id}" }) { song ->
+                                itemsIndexed(songs, key = { _, song -> "song-${song.id}" }) { index, song ->
                                     LibrarySongRow(
+                                        modifier = if (reducedMotion) Modifier else Modifier.animateItem(),
                                         song = song,
+                                        index = index,
                                         list = displaySongs,
                                         strings = strings,
                                         currentAudioId = currentAudioId,
@@ -336,9 +344,11 @@ fun LibraryScreen(
                                 )
                             }
                         } else {
-                            items(displaySongs, key = { "song-${it.id}" }) { song ->
+                            itemsIndexed(displaySongs, key = { _, song -> "song-${song.id}" }) { index, song ->
                                 LibrarySongRow(
+                                    modifier = if (reducedMotion) Modifier else Modifier.animateItem(),
                                     song = song,
+                                    index = index,
                                     list = displaySongs,
                                     strings = strings,
                                     currentAudioId = currentAudioId,
@@ -452,6 +462,7 @@ fun LibraryScreen(
 @Composable
 private fun LibrarySongRow(
     song: AudioFile,
+    index: Int,
     list: List<AudioFile>,
     strings: Strings,
     currentAudioId: Long?,
@@ -464,7 +475,8 @@ private fun LibrarySongRow(
     onDeleteSong: (AudioFile) -> Unit,
     onSongClick: (AudioFile, List<AudioFile>) -> Unit,
     onToggleSelection: (AudioFile) -> Unit,
-    onLongPress: () -> Unit
+    onLongPress: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     BeatBoxSongRow(
         audio = song,
@@ -475,12 +487,14 @@ private fun LibrarySongRow(
         isSelected = selection.contains(song.id),
         selectionMode = selectionMode,
         compact = compact,
+        index = index,
         onFavClick = { onFavClick(song) },
         onDelete = { onDeleteSong(song) },
         onRowClick = {
             if (selectionMode) onToggleSelection(song) else onSongClick(song, list)
         },
-        onRowLongClick = onLongPress
+        onRowLongClick = onLongPress,
+        modifier = modifier
     )
 }
 

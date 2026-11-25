@@ -2,7 +2,12 @@ package com.blackstack.beatbox.ui.components
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
@@ -62,6 +67,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.blackstack.beatbox.ui.theme.BeatBoxMotion
+import com.blackstack.beatbox.ui.theme.LocalReducedMotion
 
 /** Alt navigasyondaki tek bir sekme. */
 data class BeatBoxNavItem(
@@ -85,35 +91,42 @@ fun BeatBoxBottomBar(
     modifier: Modifier = Modifier
 ) {
     val primary = MaterialTheme.colorScheme.primary
+    // Sistem hareketi kapalıyken pill kaymaz, hedef konuma anında atlar.
+    val reducedMotion = LocalReducedMotion.current
     // Sekme sınırları: kayan pill bu ölçüler arasında ilerler.
     var itemBounds by remember { mutableStateOf<Map<Int, Rect>>(emptyMap()) }
     val targetBounds = itemBounds[selectedTab]
 
     // Pill değerleri yalnızca çizim aşamasında okunur; sekme geçişinde alt
     // navigasyon yeniden compose edilmez, sadece pill yeniden çizilir.
+    val pillSpec = if (reducedMotion) snap<Float>() else BeatBoxMotion.Glide
     val pillLeft = animateFloatAsState(
         targetValue = targetBounds?.left ?: 0f,
-        animationSpec = BeatBoxMotion.Soft,
+        animationSpec = pillSpec,
         label = "nav_pill_left"
     )
     val pillTop = animateFloatAsState(
         targetValue = targetBounds?.top ?: 0f,
-        animationSpec = BeatBoxMotion.Soft,
+        animationSpec = pillSpec,
         label = "nav_pill_top"
     )
     val pillWidth = animateFloatAsState(
         targetValue = targetBounds?.width ?: 0f,
-        animationSpec = BeatBoxMotion.Soft,
+        animationSpec = pillSpec,
         label = "nav_pill_width"
     )
     val pillHeight = animateFloatAsState(
         targetValue = targetBounds?.height ?: 0f,
-        animationSpec = BeatBoxMotion.Soft,
+        animationSpec = pillSpec,
         label = "nav_pill_height"
     )
     val pillAlpha = animateFloatAsState(
         targetValue = if (targetBounds != null) 1f else 0f,
-        animationSpec = tween(durationMillis = BeatBoxMotion.Quick),
+        animationSpec = if (reducedMotion) {
+            snap()
+        } else {
+            tween(durationMillis = BeatBoxMotion.Quick)
+        },
         label = "nav_pill_alpha"
     )
 
@@ -153,9 +166,19 @@ fun BeatBoxBottomBar(
                     val width = (pillWidth.value - insetX * 2f).coerceAtLeast(0f)
                     val height = (pillHeight.value - insetY * 2f).coerceAtLeast(0f)
                     if (width <= 0f || height <= 0f) return@drawBehind
+                    val left = pillLeft.value + insetX
+                    val top = pillTop.value + insetY
+                    // Yumuşak dış parıltı: blur maliyeti olmadan iki katman.
+                    val glow = 4.dp.toPx()
+                    drawRoundRect(
+                        color = primary.copy(alpha = 0.07f * alpha),
+                        topLeft = Offset(left - glow, top - glow),
+                        size = Size(width + glow * 2f, height + glow * 2f),
+                        cornerRadius = CornerRadius(21.dp.toPx() + glow)
+                    )
                     drawRoundRect(
                         color = primary.copy(alpha = 0.17f * alpha),
-                        topLeft = Offset(pillLeft.value + insetX, pillTop.value + insetY),
+                        topLeft = Offset(left, top),
                         size = Size(width, height),
                         cornerRadius = CornerRadius(21.dp.toPx())
                     )
@@ -194,6 +217,9 @@ private fun BeatBoxNavItemView(
     onBoundsChange: (Rect) -> Unit = {}
 ) {
     val haptic = LocalHapticFeedback.current
+    // Sistem hareketi kapaliyken ikon pop'u ve etiket acilisi animasyonsuz
+    // uygulanir; durum degisimi aninda gorunur olur.
+    val reducedMotion = LocalReducedMotion.current
     // Secim hem dokunmayla hem de TalkBack eylemiyle ayni yoldan gecer.
     val select = {
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -207,8 +233,19 @@ private fun BeatBoxNavItemView(
         label = "nav_press_scale"
     )
     val iconScale by animateFloatAsState(
-        targetValue = if (selected) 1f else 0.94f,
-        animationSpec = BeatBoxMotion.Snappy,
+        targetValue = if (selected) 1f else 0.92f,
+        animationSpec = when {
+            reducedMotion -> snap()
+            // Seçilen ikon kısa bir "pop" yapar: hızla büyür, yumuşakça oturur.
+            selected -> keyframes {
+                durationMillis = 420
+                0.92f at 0
+                1.09f at 150 using FastOutLinearInEasing
+                1f at 420 using BeatBoxMotion.ExpressiveEasing
+            }
+
+            else -> BeatBoxMotion.Soft
+        },
         label = "nav_icon_scale"
     )
     val primary = MaterialTheme.colorScheme.primary
@@ -219,9 +256,11 @@ private fun BeatBoxNavItemView(
             .fillMaxHeight()
             .onGloballyPositioned { onBoundsChange(it.boundsInParent()) }
             .clip(RoundedCornerShape(24.dp))
+            // Yalnızca dokunma geri bildirimi tüm öğeyi ölçekler; seçim
+            // "pop"u ikonda kalır, böylece etiket kırpılmaz.
             .graphicsLayer {
-                scaleX = pressScale * iconScale
-                scaleY = pressScale * iconScale
+                scaleX = pressScale
+                scaleY = pressScale
             }
             // Etiket, secili durum ve tiklama tek bir erisilebilirlik dugumunde
             // toplanir; aksi halde TalkBack sekme adini veya "secili" bilgisini
@@ -252,8 +291,12 @@ private fun BeatBoxNavItemView(
             AnimatedContent(
                 targetState = selected,
                 transitionSpec = {
-                    (scaleIn(initialScale = 0.72f) + fadeIn(tween(140))) togetherWith
-                        (scaleOut(targetScale = 0.72f) + fadeOut(tween(100)))
+                    if (reducedMotion) {
+                        EnterTransition.None togetherWith ExitTransition.None
+                    } else {
+                        (scaleIn(initialScale = 0.72f) + fadeIn(tween(140))) togetherWith
+                            (scaleOut(targetScale = 0.72f) + fadeOut(tween(100)))
+                    }
                 },
                 label = "nav_icon_morph"
             ) { isSelected ->
@@ -272,8 +315,20 @@ private fun BeatBoxNavItemView(
 
             AnimatedVisibility(
                 visible = selected,
-                enter = fadeIn(tween(180)) + expandHorizontally(tween(220)),
-                exit = fadeOut(tween(120)) + shrinkHorizontally(tween(160))
+                enter = if (reducedMotion) {
+                    EnterTransition.None
+                } else {
+                    fadeIn(tween(180)) + expandHorizontally(
+                        animationSpec = tween(240, easing = BeatBoxMotion.ExpressiveEasing)
+                    )
+                },
+                exit = if (reducedMotion) {
+                    ExitTransition.None
+                } else {
+                    fadeOut(tween(120)) + shrinkHorizontally(
+                        animationSpec = tween(170, easing = BeatBoxMotion.StandardEasing)
+                    )
+                }
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Spacer(Modifier.width(5.dp))
