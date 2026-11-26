@@ -1,8 +1,8 @@
-BeatBox 3.9.5
-• Windows kurulumuna uygulama simgesi eklendi; kısayol, görev çubuğu ve "Uygulamalar" listesi artık BeatBox simgesini gösteriyor
-• Kurulum kaydı sabit bir kimlik kullanıyor: yeni sürümler "Uygulamalar" listesindeki aynı kaydı güncelliyor
-• Kurulum kullanıcı bazına alındı; uygulama içi güncelleme yönetici izni istemiyor
-• Pencere boyutu ekrana sığacak şekilde sınırlandı; Ayarlar'ın alt satırları artık erişilebilir
-• Uygulama içi güncelleme indirmesi düzeltildi: ilerleme güncellemesi indirmeyi durduruyordu
-• İndirme başarısız olursa yarım kalan dosya siliniyor, hata nedeni tanılama dosyasına yazılıyor
-• Önceki oturumlardan kalan geçici kurulum dosyaları her açılışta temizleniyor
+BeatBox 3.9.6
+• Android'de sekmeler arası geçiş paylaşımlı eksen animasyonuna taşındı: içerik hafifçe derinlikten geliyor
+• Alt navigasyondaki seçim göstergesi yaylı bir kayma ve iki katmanlı parıltıyla ilerliyor, seçilen ikon kısa bir "pop" yapıyor
+• Tam ekran oynatıcı açılırken üst çubuk, görselleştirici, şarkı bilgisi, ilerleme çubuğu ve kontroller sırayla beliriyor
+• Kütüphane listesinde satır eklenmesi, silinmesi ve yer değiştirmesi yumuşak animasyonla yapılıyor
+• Sistemde "animasyonları kaldır" açıkken veya performans modu etkinken tüm bu hareketler animasyonsuz uygulanıyor
+• Masaüstü: kapağı olmayan dosyalarda albüm kapağı hatası giderildi
+• Masaüstü: mini oynatıcı sayfa alanının altına alındı; sayfa ve gezinme geçişlerine yumuşak animasyon eklendi
