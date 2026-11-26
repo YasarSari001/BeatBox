@@ -58,8 +58,10 @@ jobs:
       - name: Windows kurulum paketi
         run: ./gradlew --no-daemon :desktop:createDistributable :desktop:packageExe
 
+      # Dağıtılan APK release derlemesidir: R8 küçültmesi ve kaynak eleme açık,
+      # debuggable kapalı. İmza depodaki sabit anahtarla yapılır.
       - name: Android APK
-        run: ./gradlew --no-daemon :app:assembleDebug
+        run: ./gradlew --no-daemon :app:assembleRelease
 
       - name: Paketleri sabit adlarla hazırla
         shell: pwsh
@@ -80,7 +82,9 @@ jobs:
           Compress-Archive -Path (Join-Path $appDir.FullName "*") `
             -DestinationPath "dist/BeatBox-windows.zip" -Force
 
-          Copy-Item "app/build/outputs/apk/debug/app-debug.apk" "dist/BeatBox.apk"
+          $apk = "app/build/outputs/apk/release/app-release.apk"
+          if (-not (Test-Path $apk)) { throw "Release APK bulunamadı: $apk" }
+          Copy-Item $apk "dist/BeatBox.apk"
           Get-ChildItem dist | Format-Table Name, Length
 
       - name: Yayını oluştur

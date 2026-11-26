@@ -52,6 +52,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.boundsInParent
@@ -91,6 +92,7 @@ fun BeatBoxBottomBar(
     modifier: Modifier = Modifier
 ) {
     val primary = MaterialTheme.colorScheme.primary
+    val secondary = MaterialTheme.colorScheme.secondary
     // Sistem hareketi kapalıyken pill kaymaz, hedef konuma anında atlar.
     val reducedMotion = LocalReducedMotion.current
     // Sekme sınırları: kayan pill bu ölçüler arasında ilerler.
@@ -169,18 +171,36 @@ fun BeatBoxBottomBar(
                     val left = pillLeft.value + insetX
                     val top = pillTop.value + insetY
                     // Yumuşak dış parıltı: blur maliyeti olmadan iki katman.
-                    val glow = 4.dp.toPx()
+                    val glow = 5.dp.toPx()
+                    val radius = CornerRadius(21.dp.toPx())
                     drawRoundRect(
-                        color = primary.copy(alpha = 0.07f * alpha),
+                        color = primary.copy(alpha = 0.08f * alpha),
                         topLeft = Offset(left - glow, top - glow),
                         size = Size(width + glow * 2f, height + glow * 2f),
-                        cornerRadius = CornerRadius(21.dp.toPx() + glow)
+                        cornerRadius = CornerRadius(radius.x + glow)
                     )
+                    // Gösterge düz renk yerine soldan sağa incelen cam geçişiyle
+                    // çizilir; seçili sekme "ışıklandırılmış" görünür.
                     drawRoundRect(
-                        color = primary.copy(alpha = 0.17f * alpha),
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                primary.copy(alpha = 0.30f * alpha),
+                                secondary.copy(alpha = 0.16f * alpha)
+                            ),
+                            start = Offset(left, top),
+                            end = Offset(left + width, top + height)
+                        ),
                         topLeft = Offset(left, top),
                         size = Size(width, height),
-                        cornerRadius = CornerRadius(21.dp.toPx())
+                        cornerRadius = radius
+                    )
+                    // Üst kenardaki ince ışık çizgisi cam hissini tamamlar.
+                    drawRoundRect(
+                        color = Color.White.copy(alpha = 0.18f * alpha),
+                        topLeft = Offset(left, top),
+                        size = Size(width, height),
+                        cornerRadius = radius,
+                        style = Stroke(width = 1.dp.toPx())
                     )
                 }
         ) {
@@ -232,6 +252,13 @@ private fun BeatBoxNavItemView(
         animationSpec = tween(durationMillis = 120),
         label = "nav_press_scale"
     )
+    // Seçili ikonun arkasındaki rozet: 0 → 1 arasında yumuşakça açılır.
+    // Değer yalnızca çizim aşamasında okunur, sekme geçişinde recomposition yok.
+    val badgeProgress by animateFloatAsState(
+        targetValue = if (selected) 1f else 0f,
+        animationSpec = if (reducedMotion) snap() else BeatBoxMotion.Soft,
+        label = "nav_icon_badge"
+    )
     val iconScale by animateFloatAsState(
         targetValue = if (selected) 1f else 0.92f,
         animationSpec = when {
@@ -249,6 +276,7 @@ private fun BeatBoxNavItemView(
         label = "nav_icon_scale"
     )
     val primary = MaterialTheme.colorScheme.primary
+    val secondary = MaterialTheme.colorScheme.secondary
     val idle = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f)
 
     Box(
@@ -288,29 +316,74 @@ private fun BeatBoxNavItemView(
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.padding(horizontal = 4.dp)
         ) {
-            AnimatedContent(
-                targetState = selected,
-                transitionSpec = {
-                    if (reducedMotion) {
-                        EnterTransition.None togetherWith ExitTransition.None
-                    } else {
-                        (scaleIn(initialScale = 0.72f) + fadeIn(tween(140))) togetherWith
-                            (scaleOut(targetScale = 0.72f) + fadeOut(tween(100)))
-                    }
-                },
-                label = "nav_icon_morph"
-            ) { isSelected ->
-                Icon(
-                    imageVector = if (isSelected) item.selectedIcon else item.icon,
-                    contentDescription = null,
-                    tint = if (isSelected) primary else idle,
-                    modifier = Modifier
-                        .size(23.dp)
-                        .graphicsLayer {
-                            scaleX = iconScale
-                            scaleY = iconScale
+            // İkon rozeti: hale, renk geçişli daire ve ince halka. Hepsi
+            // drawBehind içinde çizilir; animasyon sırasında yalnızca yeniden
+            // çizim olur, alt navigasyon yeniden compose edilmez.
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .drawBehind {
+                        val progress = badgeProgress
+                        if (progress <= 0.01f) return@drawBehind
+                        val center = Offset(size.width / 2f, size.height / 2f)
+                        val radius = size.minDimension / 2f
+                        drawCircle(
+                            brush = Brush.radialGradient(
+                                colors = listOf(
+                                    primary.copy(alpha = 0.22f * progress),
+                                    Color.Transparent
+                                ),
+                                center = center,
+                                radius = radius
+                            ),
+                            radius = radius,
+                            center = center
+                        )
+                        drawCircle(
+                            brush = Brush.linearGradient(
+                                colors = listOf(
+                                    primary.copy(alpha = 0.34f * progress),
+                                    secondary.copy(alpha = 0.16f * progress)
+                                ),
+                                start = Offset(0f, 0f),
+                                end = Offset(size.width, size.height)
+                            ),
+                            radius = radius * 0.82f,
+                            center = center
+                        )
+                        drawCircle(
+                            color = Color.White.copy(alpha = 0.20f * progress),
+                            radius = radius * 0.82f,
+                            center = center,
+                            style = Stroke(width = 1.dp.toPx())
+                        )
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                AnimatedContent(
+                    targetState = selected,
+                    transitionSpec = {
+                        if (reducedMotion) {
+                            EnterTransition.None togetherWith ExitTransition.None
+                        } else {
+                            (scaleIn(initialScale = 0.72f) + fadeIn(tween(140))) togetherWith
+                                (scaleOut(targetScale = 0.72f) + fadeOut(tween(100)))
                         }
-                )
+                    },
+                    label = "nav_icon_morph"
+                ) { isSelected ->
+                    Icon(
+                        imageVector = if (isSelected) item.selectedIcon else item.icon,
+                        contentDescription = null,
+                        tint = if (isSelected) primary else idle,
+                        modifier = Modifier
+                            .size(22.dp)
+                            .graphicsLayer {
+                                scaleX = iconScale
+                                scaleY = iconScale
+                            }
+                    )
+                }
             }
 
             AnimatedVisibility(
@@ -336,6 +409,7 @@ private fun BeatBoxNavItemView(
                         text = item.label,
                         fontSize = 10.5.sp,
                         fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 0.3.sp,
                         color = primary,
                         maxLines = 1,
                         modifier = Modifier.clearAndSetSemantics { }
