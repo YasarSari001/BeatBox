@@ -23,6 +23,21 @@ android {
     namespace = "com.blackstack.beatbox"
     compileSdk = 37
 
+    /*
+     * Tüm derlemeler aynı anahtarla imzalanır. Anahtar depoda tutulur çünkü
+     * APK yalnızca GitHub Releases üzerinden dağıtılıyor; GitHub runner'ları her
+     * çalışmada yeni bir debug anahtarı ürettiği için her sürüm farklı imzayla
+     * çıkıyor ve güncellemeler "paket çakışıyor" hatasıyla kurulamıyordu.
+     */
+    signingConfigs {
+        create("beatbox") {
+            storeFile = rootProject.file("keystore/beatbox.jks")
+            storePassword = "beatbox"
+            keyAlias = "beatbox"
+            keyPassword = "beatbox"
+        }
+    }
+
     defaultConfig {
         applicationId = "com.blackstack.beatbox"
         minSdk = 26
@@ -40,6 +55,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
+            signingConfig = signingConfigs.getByName("beatbox")
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -49,6 +65,7 @@ android {
         debug {
             isMinifyEnabled = false
             isDebuggable = true
+            signingConfig = signingConfigs.getByName("beatbox")
         }
     }
     compileOptions {

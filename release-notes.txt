@@ -1,4 +1,6 @@
-BeatBox 3.9.6
+BeatBox 3.9.7
+• Android APK artık depoda tutulan sabit bir imza anahtarıyla derleniyor; bundan sonraki güncellemeler önceki sürümün üzerine doğrudan kurulabilecek
+• Bu sürüm ilk kez yeni anahtarla imzalandığı için bir defalık yeniden kurulum gerekiyor: eski BeatBox'ı kaldırıp bu sürümü kur
 • Android'de sekmeler arası geçiş paylaşımlı eksen animasyonuna taşındı: içerik hafifçe derinlikten geliyor
 • Alt navigasyondaki seçim göstergesi yaylı bir kayma ve iki katmanlı parıltıyla ilerliyor, seçilen ikon kısa bir "pop" yapıyor
 • Tam ekran oynatıcı açılırken üst çubuk, görselleştirici, şarkı bilgisi, ilerleme çubuğu ve kontroller sırayla beliriyor
